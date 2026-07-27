@@ -1,0 +1,25 @@
+version: 1
+
+project:
+  name: safer-support-agent
+
+agent:
+  name: safer-support-agent
+  owner: engineering@example.com
+  purpose: Handle approved customer support requests with human approval for deletes
+  environment: development
+  criticality: high
+
+scan:
+  include:
+    - "**/*.py"
+
+privacy:
+  redact_secrets: true
+
+policy:
+  fail_on: critical
+
+network:
+  allowed_domains:
+    - api.example.com

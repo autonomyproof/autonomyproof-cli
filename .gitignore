@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.mypy_cache/
+.ruff_cache/
+
+# AutonomyProof artifacts
+autonomyproof-report.json
+autonomyproof-report.html
+autonomyproof-report.sarif
+.autonomyproof/
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
