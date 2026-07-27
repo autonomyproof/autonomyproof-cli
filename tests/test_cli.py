@@ -33,7 +33,7 @@ def _home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
 def test_version(runner: CliRunner) -> None:
     result = runner.invoke(cli.main, ["--version"])
     assert result.exit_code == 0
-    assert "0.1.0" in result.output
+    assert "0.2.0" in result.output
 
 
 def test_init_creates_and_is_idempotent(runner: CliRunner) -> None:
@@ -198,6 +198,52 @@ def test_scan_target_is_file(runner: CliRunner) -> None:
         Path("agent.py").write_text("x = 1\n", encoding="utf-8")
         result = runner.invoke(cli.main, ["scan", "agent.py", "--local-only", "--fail-on", "none"])
         assert result.exit_code == 0
+
+
+def test_baseline_writes_file(runner: CliRunner) -> None:
+    with runner.isolated_filesystem():
+        Path("agent.py").write_text(_VULN, encoding="utf-8")
+        result = runner.invoke(cli.main, ["baseline", ".", "--output", "base.json"])
+        assert result.exit_code == 0
+        assert "Wrote baseline" in result.output
+        assert Path("base.json").exists()
+
+
+def test_scan_baseline_suppresses_known_findings(runner: CliRunner) -> None:
+    with runner.isolated_filesystem():
+        Path("agent.py").write_text(_VULN, encoding="utf-8")
+        assert runner.invoke(cli.main, ["baseline", ".", "--output", "base.json"]).exit_code == 0
+        # Every current finding is in the baseline, so even --fail-on critical passes.
+        result = runner.invoke(
+            cli.main,
+            ["scan", ".", "--local-only", "--baseline", "base.json", "--fail-on", "critical"],
+        )
+        assert result.exit_code == 0
+        assert "0 new" in result.output
+
+
+def test_scan_baseline_fails_on_new_authority(runner: CliRunner) -> None:
+    with runner.isolated_filesystem():
+        Path("agent.py").write_text(_VULN, encoding="utf-8")
+        assert runner.invoke(cli.main, ["baseline", ".", "--output", "base.json"]).exit_code == 0
+        # A new file introduces authority absent from the baseline.
+        Path("agent2.py").write_text(_VULN, encoding="utf-8")
+        result = runner.invoke(
+            cli.main,
+            ["scan", ".", "--local-only", "--baseline", "base.json", "--fail-on", "critical"],
+        )
+        assert result.exit_code == 1
+        assert "known," in result.output
+        assert "0 new" not in result.output
+
+
+def test_scan_baseline_invalid_file(runner: CliRunner) -> None:
+    with runner.isolated_filesystem():
+        Path("agent.py").write_text(_VULN, encoding="utf-8")
+        Path("base.json").write_text("{not json", encoding="utf-8")
+        result = runner.invoke(cli.main, ["scan", ".", "--local-only", "--baseline", "base.json"])
+        assert result.exit_code != 0
+        assert "not valid JSON" in result.output
 
 
 def test_login_with_token(runner: CliRunner) -> None:

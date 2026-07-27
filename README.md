@@ -76,7 +76,38 @@ autonomyproof scan . --format sarif      # for GitHub code scanning
 autonomyproof scan . --fail-on high      # non-zero exit for CI gating
 ```
 
+## Catch capability creep (the PR gate)
+
+Most repos already hold some authority you've accepted. What you want to catch is a pull
+request that *adds* new unsafe authority — the `shell=True` that slipped in, the new tool
+that can wire funds with no approval. Record a baseline once, commit it, then gate on it:
+
+```bash
+autonomyproof baseline .                    # writes autonomyproof-baseline.json
+git add autonomyproof-baseline.json && git commit -m "Add authority baseline"
+
+# In CI, fail only when a change introduces new authority above the threshold:
+autonomyproof scan . --baseline autonomyproof-baseline.json --fail-on high
+```
+
+Findings already in the baseline are reported but don't fail the build; a finding whose
+fingerprint isn't in the baseline does. Fingerprints are stable across unrelated line edits,
+so code that merely moves doesn't read as new. When you intentionally accept new authority,
+re-run `autonomyproof baseline .` and commit the updated file in the same PR.
+
 ## CI (GitHub Actions)
+
+Use the action directly:
+
+```yaml
+- uses: autonomyproof/autonomyproof-cli@v0.2.0
+  with:
+    target: .
+    fail-on: high
+    baseline: autonomyproof-baseline.json   # optional: gate only on new authority
+```
+
+Or run the CLI yourself and upload SARIF to GitHub code scanning:
 
 ```yaml
 - run: pipx install autonomyproof
@@ -87,6 +118,21 @@ autonomyproof scan . --fail-on high      # non-zero exit for CI gating
   with:
     sarif_file: autonomyproof-report.sarif
 ```
+
+## pre-commit
+
+Gate locally before a commit ever leaves your machine:
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/autonomyproof/autonomyproof-cli
+    rev: v0.2.0
+    hooks:
+      - id: autonomyproof
+```
+
+The hook writes reports to `.autonomyproof/` — add that to your `.gitignore`.
 
 ## The readiness score
 

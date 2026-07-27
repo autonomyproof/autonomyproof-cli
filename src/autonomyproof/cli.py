@@ -15,6 +15,13 @@ from autonomyproof.auth import (
     load_credentials,
     save_token,
 )
+from autonomyproof.baseline import (
+    BASELINE_FILENAME,
+    BaselineError,
+    load_baseline_fingerprints,
+    new_findings,
+    write_baseline,
+)
 from autonomyproof.config import (
     CONFIG_FILENAME,
     DEFAULT_IGNORE_CONTENT,
@@ -23,7 +30,7 @@ from autonomyproof.config import (
     ConfigError,
     default_config_yaml,
 )
-from autonomyproof.models import ScanResult, Severity
+from autonomyproof.models import Finding, ScanResult, Severity
 from autonomyproof.reporters import write_html, write_json, write_sarif
 from autonomyproof.rules.registry import all_rules, get_rule
 from autonomyproof.scanner import Scanner
@@ -46,6 +53,24 @@ def _load_config(config_path: Path | None, root: Path) -> Config:
     return Config()
 
 
+def _resolve_root(target: Path) -> Path:
+    return target if target.is_dir() else target.parent
+
+
+def _configure(
+    config_path: Path | None,
+    root: Path,
+    include: tuple[str, ...],
+    exclude: tuple[str, ...],
+) -> Config:
+    config = _load_config(config_path, root)
+    if include:
+        config.include = list(include)
+    if exclude:
+        config.exclude = [*config.exclude, *exclude]
+    return config
+
+
 def _write_reports(result: ScanResult, fmt: str, out_dir: Path) -> list[Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
@@ -58,11 +83,11 @@ def _write_reports(result: ScanResult, fmt: str, out_dir: Path) -> list[Path]:
     return written
 
 
-def _should_fail(result: ScanResult, fail_on: str) -> bool:
+def _should_fail(findings: list[Finding], fail_on: str) -> bool:
     threshold = _FAIL_RANKS[fail_on]
     if threshold is None:
         return False
-    return any(f.severity.rank >= threshold for f in result.findings)
+    return any(f.severity.rank >= threshold for f in findings)
 
 
 @click.group()
@@ -93,6 +118,13 @@ def init(root: Path) -> None:
 @click.option("--local-only", is_flag=True, help="Never contact the cloud.")
 @click.option("--push/--no-push", default=True, help="Push sanitized findings when logged in.")
 @click.option("--fail-on", type=click.Choice(list(_FAIL_RANKS)), default=None)
+@click.option(
+    "--baseline",
+    "baseline_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=None,
+    help="Gate only on findings absent from this baseline (authority-regression gate).",
+)
 @click.option("--format", "fmt", type=click.Choice(["html", "json", "sarif", "all"]), default="all")
 @click.option("--output", type=click.Path(file_okay=False, path_type=Path), default=".")
 @click.option("--project", "project_name", default=None)
@@ -109,6 +141,7 @@ def scan(
     local_only: bool,
     push: bool,
     fail_on: str | None,
+    baseline_path: Path | None,
     fmt: str,
     output: Path,
     project_name: str | None,
@@ -120,12 +153,8 @@ def scan(
     no_cache: bool,
 ) -> None:
     """Scan TARGET (default: current directory)."""
-    root = target if target.is_dir() else target.parent
-    config = _load_config(config_path, root)
-    if include:
-        config.include = list(include)
-    if exclude:
-        config.exclude = [*config.exclude, *exclude]
+    root = _resolve_root(target)
+    config = _configure(config_path, root, include, exclude)
     effective_fail_on = fail_on or config.fail_on
 
     result = Scanner(config).scan(root, project_name=project_name)
@@ -138,8 +167,18 @@ def scan(
         f"(critical {counts['critical']}, high {counts['high']}, "
         f"medium {counts['medium']}, low {counts['low']})"
     )
+
+    gated = result.findings
+    if baseline_path is not None:
+        try:
+            known = load_baseline_fingerprints(baseline_path)
+        except BaselineError as exc:
+            raise click.ClickException(str(exc)) from exc
+        gated = new_findings(result.findings, known)
+        click.echo(f"Baseline: {len(result.findings) - len(gated)} known, {len(gated)} new")
+
     if verbose:
-        for finding in result.findings:
+        for finding in gated:
             click.echo(
                 f"  {finding.severity.value:8} {finding.ruleId} {finding.file}:{finding.line}"
             )
@@ -149,7 +188,7 @@ def scan(
     _maybe_push(result, local_only=local_only, push=push, api_url=api_url)
     click.echo(SCORE_DISCLAIMER)
 
-    if _should_fail(result, effective_fail_on):
+    if _should_fail(gated, effective_fail_on):
         ctx.exit(1)
 
 
@@ -168,6 +207,39 @@ def _maybe_push(result: ScanResult, *, local_only: bool, push: bool, api_url: st
         click.echo(f"Cloud push failed ({exc}). Local report preserved.")
     finally:
         client.close()
+
+
+@main.command("baseline")
+@click.argument("target", type=click.Path(exists=True, path_type=Path), default=".")
+@click.option(
+    "--output",
+    type=click.Path(dir_okay=False, path_type=Path),
+    default=BASELINE_FILENAME,
+    help="Where to write the baseline file.",
+)
+@click.option("--project", "project_name", default=None)
+@click.option("--config", "config_path", type=click.Path(path_type=Path), default=None)
+@click.option("--include", multiple=True, help="Override include glob(s).")
+@click.option("--exclude", multiple=True, help="Additional exclude glob(s).")
+def baseline(
+    target: Path,
+    output: Path,
+    project_name: str | None,
+    config_path: Path | None,
+    include: tuple[str, ...],
+    exclude: tuple[str, ...],
+) -> None:
+    """Record TARGET's current findings as an authority baseline.
+
+    Commit the baseline, then gate future scans with
+    ``autonomyproof scan --baseline <file> --fail-on <level>`` so a pull request
+    fails only when it introduces new unsafe authority.
+    """
+    root = _resolve_root(target)
+    config = _configure(config_path, root, include, exclude)
+    result = Scanner(config).scan(root, project_name=project_name)
+    path = write_baseline(result, Path(output))
+    click.echo(f"Wrote baseline with {len(result.findings)} findings to {path}")
 
 
 @main.command()

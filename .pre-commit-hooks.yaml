@@ -1,0 +1,8 @@
+- id: autonomyproof
+  name: AutonomyProof agent-authority scan
+  description: Fail the commit when agent code holds unsafe authority.
+  entry: autonomyproof scan
+  language: python
+  pass_filenames: false
+  always_run: true
+  args: ["--local-only", "--fail-on", "high", "--format", "sarif", "--output", ".autonomyproof"]
