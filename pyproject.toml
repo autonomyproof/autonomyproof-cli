@@ -30,7 +30,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://autonomyproof.io"
-Documentation = "https://docs.autonomyproof.io"
+Documentation = "https://github.com/autonomyproof/autonomyproof-cli#readme"
 Source = "https://github.com/autonomyproof/autonomyproof-cli"
 Issues = "https://github.com/autonomyproof/autonomyproof-cli/issues"
 
