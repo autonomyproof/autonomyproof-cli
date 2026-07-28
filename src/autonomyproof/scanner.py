@@ -12,6 +12,7 @@ from autonomyproof.config import Config
 from autonomyproof.discovery import (
     dependency_names,
     discover_files,
+    read_ignore_patterns,
     read_repo_metadata,
 )
 from autonomyproof.frameworks import detect_frameworks
@@ -50,7 +51,8 @@ class Scanner:
     def scan(self, root: Path, project_name: str | None = None) -> ScanResult:
         """Scan ``root`` and return a fully populated :class:`ScanResult`."""
         start = time.perf_counter()
-        files = discover_files(root, self.config.include, self.config.exclude)
+        exclude = [*self.config.exclude, *read_ignore_patterns(root)]
+        files = discover_files(root, self.config.include, exclude)
         python_files = [p for p in files if p.suffix == ".py"]
 
         analyses: list[FileAnalysis] = []

@@ -11,7 +11,10 @@ import yaml
 CONFIG_FILENAME = "autonomyproof.yaml"
 IGNORE_FILENAME = ".autonomyproofignore"
 
-DEFAULT_INCLUDE = ["**/*.py", "**/*.yaml", "**/*.yml", "**/*.json"]
+# Only Python is analyzed today; keep the default include honest so matched-but-
+# unanalyzed YAML/JSON files aren't silently discovered and dropped. Non-Python
+# manifest analysis (the authority graph) will re-add those globs when it lands.
+DEFAULT_INCLUDE = ["**/*.py"]
 DEFAULT_EXCLUDE = [
     ".git/**",
     ".venv/**",
@@ -48,6 +51,9 @@ class Config:
     ignored_rules: list[str] = field(default_factory=list)
     accepted_findings: list[str] = field(default_factory=list)
     allowed_domains: list[str] = field(default_factory=list)
+    max_iterations: int | None = None
+    max_runtime_seconds: int | None = None
+    max_subagents: int | None = None
 
     @classmethod
     def from_mapping(cls, data: dict[str, Any]) -> Config:
@@ -61,6 +67,7 @@ class Config:
         privacy = _section(data, "privacy")
         policy = _section(data, "policy")
         network = _section(data, "network")
+        limits = _section(data, "limits")
 
         return cls(
             version=int(data.get("version", 1)),
@@ -77,6 +84,9 @@ class Config:
             ignored_rules=_str_list(policy.get("ignored_rules"), []),
             accepted_findings=_str_list(policy.get("accepted_findings"), []),
             allowed_domains=_str_list(network.get("allowed_domains"), []),
+            max_iterations=_opt_int(limits.get("maximum_iterations")),
+            max_runtime_seconds=_opt_int(limits.get("maximum_runtime_seconds")),
+            max_subagents=_opt_int(limits.get("maximum_subagents")),
         )
 
     @classmethod
@@ -104,6 +114,14 @@ def _opt_str(value: Any) -> str | None:
     return None if value is None else str(value)
 
 
+def _opt_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ConfigError("Expected an integer.")
+    return value
+
+
 def _str_list(value: Any, default: list[str]) -> list[str]:
     if value is None:
         return list(default)
@@ -129,8 +147,6 @@ agent:
 scan:
   include:
     - "**/*.py"
-    - "**/*.yaml"
-    - "**/*.json"
   exclude:
     - ".venv/**"
     - "tests/fixtures/**"

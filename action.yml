@@ -27,7 +27,7 @@ inputs:
     required: false
     default: "."
   version:
-    description: "Version of the autonomyproof package to install (e.g. 0.1.0). Defaults to the latest release."
+    description: "Version of the autonomyproof package to install (e.g. 0.2.0). Defaults to the release matching the action tag you pinned (e.g. @v0.2.0 installs 0.2.0); falls back to latest for branch/SHA refs."
     required: false
     default: ""
   args:
@@ -45,10 +45,17 @@ runs:
 
     - name: Install AutonomyProof
       shell: bash
+      env:
+        ACTION_REF: ${{ github.action_ref }}
       run: |
         if [ -n "${{ inputs.version }}" ]; then
+          # Explicit override always wins.
           python -m pip install --upgrade "autonomyproof==${{ inputs.version }}"
+        elif [[ "$ACTION_REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          # Pinned to a release tag (e.g. @v0.2.0): install the matching scanner version.
+          python -m pip install --upgrade "autonomyproof==${ACTION_REF#v}"
         else
+          # Branch or SHA ref: no matching release, use the latest published version.
           python -m pip install --upgrade autonomyproof
         fi
 
