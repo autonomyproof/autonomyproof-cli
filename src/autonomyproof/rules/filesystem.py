@@ -36,6 +36,21 @@ def _first_positional(call: ast.Call) -> ast.expr | None:
     return call.args[0] if call.args else None
 
 
+def _resolved_path_strings(ctx: RuleContext, call: ast.Call) -> list[str]:
+    """String candidates for a filesystem call, resolving one-line variable indirection.
+
+    Literals inside the call plus, for any bare name used in it, the constant string it
+    was assigned earlier in the same function — so ``p = "~/.aws"; open(p)`` is not missed.
+    """
+    strings = list(string_literals(call))
+    for node in ast.walk(call):
+        if isinstance(node, ast.Name):
+            value = ctx.analysis.resolve_local_value(node.id, call)
+            if value is not None:
+                strings.extend(string_literals(value))
+    return strings
+
+
 def _mode_is_write(call: ast.Call) -> bool:
     """Return ``True`` if an ``open`` call is in a write/append/create mode."""
     mode = call.args[1] if len(call.args) > 1 else keyword(call, "mode")
@@ -125,7 +140,7 @@ class CredentialPathAccessRule(Rule):
         for call in ctx.analysis.calls:
             if not self._is_fs_sink(ctx, call):
                 continue
-            for literal in string_literals(call):
+            for literal in _resolved_path_strings(ctx, call):
                 lowered = literal.lower()
                 marker = next((m for m in _SENSITIVE_MARKERS if m in lowered), None)
                 if marker is not None:

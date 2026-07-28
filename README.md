@@ -114,7 +114,7 @@ re-run `autonomyproof baseline .` and commit the updated file in the same PR.
 Use the action directly:
 
 ```yaml
-- uses: autonomyproof/autonomyproof-cli@v0.3.0
+- uses: autonomyproof/autonomyproof-cli@v0.4.0
   with:
     target: .
     fail-on: high
@@ -141,7 +141,7 @@ Gate locally before a commit ever leaves your machine:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/autonomyproof/autonomyproof-cli
-    rev: v0.3.0
+    rev: v0.4.0
     hooks:
       - id: autonomyproof
 ```
