@@ -85,5 +85,19 @@ def test_ag023_environment_from_string() -> None:
     assert run_rule(TemplateInjectionRule(), "env.from_string(user_input)\n")
 
 
+def test_ag023_environment_call_from_string() -> None:
+    code = "import jinja2\njinja2.Environment().from_string(user_input)\n"
+    assert run_rule(TemplateInjectionRule(), code)
+
+
 def test_ag023_from_string_constant_clean() -> None:
     assert run_rule(TemplateInjectionRule(), "env.from_string('static')\n") == []
+
+
+def test_ag023_unrelated_from_string_is_clean() -> None:
+    # A deserializer like RunState.from_string is not template injection (benchmark FP fix).
+    assert run_rule(TemplateInjectionRule(), "RunState.from_string(agent, blob)\n") == []
+
+
+def test_ag023_from_string_on_non_name_receiver_clean() -> None:
+    assert run_rule(TemplateInjectionRule(), "items[0].from_string(user_input)\n") == []

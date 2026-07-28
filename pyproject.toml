@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "autonomyproof"
-version = "0.5.0"
+version = "0.6.0"
 description = "Open-source local scanner that finds unsafe capabilities and missing guardrails in Python AI-agent code."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -77,7 +77,7 @@ line-length = 100
 target-version = "py311"
 src = ["src", "tests"]
 # examples/ contains intentionally-vulnerable code used as scanner fixtures.
-extend-exclude = ["examples"]
+extend-exclude = ["examples", "benchmark"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "C4", "SIM", "PTH", "RUF"]

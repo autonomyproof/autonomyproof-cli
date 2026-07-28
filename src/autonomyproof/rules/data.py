@@ -76,6 +76,13 @@ def _receiver_name(func: ast.Attribute) -> str:
     return ""
 
 
+def _is_parameterized(call: ast.Call) -> bool:
+    """Whether ``execute`` binds parameters separately (the safe, non-interpolated form)."""
+    if len(call.args) >= 2:
+        return True
+    return any(kw.arg in {"parameters", "params", "vars"} for kw in call.keywords)
+
+
 class ModelControlledSqlRule(Rule):
     """AG012 — Model-controlled SQL."""
 
@@ -103,12 +110,20 @@ class ModelControlledSqlRule(Rule):
                 "text",
                 "sqlalchemy.text",
             }
+            # Look through sqlalchemy text("...") so a constant SQL string isn't model-controlled.
+            effective = arg
+            if wraps_text and isinstance(arg, ast.Call) and arg.args:
+                effective = arg.args[0]
             if not (
-                is_model_controlled(arg) and (_receiver_name(func) in _DB_RECEIVERS or wraps_text)
+                is_model_controlled(effective)
+                and (_receiver_name(func) in _DB_RECEIVERS or wraps_text)
             ):
                 continue
-            if classify_source(ctx, call, arg) == "safe":
+            if classify_source(ctx, call, effective) == "safe":
                 # Query provably comes from a constant or trusted config, not model input.
+                continue
+            if _is_parameterized(call):
+                # Parameters are bound separately — the query string is not interpolated.
                 continue
             mutates = any(
                 mutation in literal.lower()
