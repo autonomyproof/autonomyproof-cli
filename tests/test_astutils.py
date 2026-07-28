@@ -23,6 +23,53 @@ def test_resolve_call_with_import_alias() -> None:
     assert a.resolve_call(a.calls[0]) == "subprocess.run"
 
 
+def test_resolve_local_value_module_scope_without_lineno_origin() -> None:
+    a = _analysis("x = 'http://10.0.0.1'\n")
+    # The module node has no lineno, exercising the un-ordered lookup path.
+    value = a.resolve_local_value("x", a.tree)
+    assert is_constant_str(value)
+
+
+def test_resolve_local_value_prefers_last_before_use() -> None:
+    a = _analysis("x = 'a'\nx = 'b'\nf(x)\n")
+    call = a.calls[0]
+    value = a.resolve_local_value("x", call)
+    assert is_constant_str(value) and value.value == "b"  # type: ignore[attr-defined]
+
+
+def test_resolve_local_value_falls_back_to_module() -> None:
+    a = _analysis("URL = 'http://10.0.0.1'\ndef f():\n    return get(URL)\n")
+    call = a.calls[0]
+    assert is_constant_str(a.resolve_local_value("URL", call))
+
+
+def test_resolve_local_value_ignores_annotation_of_other_name() -> None:
+    a = _analysis("def f():\n    y: int = 5\n    return get(x)\n")
+    call = a.calls[0]
+    assert a.resolve_local_value("x", call) is None
+
+
+def test_is_parameter_covers_vararg_and_kwarg() -> None:
+    a = _analysis("def f(a, *args, **kw):\n    return g()\n")
+    call = a.calls[0]
+    assert a.is_parameter("a", call)
+    assert a.is_parameter("args", call)
+    assert a.is_parameter("kw", call)
+    assert not a.is_parameter("missing", call)
+
+
+def test_is_parameter_false_at_module_level() -> None:
+    a = _analysis("g(x)\n")
+    assert not a.is_parameter("x", a.calls[0])
+
+
+def test_resolve_local_value_does_not_leak_across_functions() -> None:
+    # A local in one function must never resolve to an identically-named local in another.
+    a = _analysis("def other():\n    u = 'secret'\ndef here():\n    return get(u)\n")
+    call = a.calls[0]  # get(u) inside here()
+    assert a.resolve_local_value("u", call) is None
+
+
 def test_resolve_call_with_from_import() -> None:
     a = _analysis("from os import system\nsystem(x)\n")
     assert a.resolve_call(a.calls[0]) == "os.system"

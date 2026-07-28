@@ -33,7 +33,7 @@ def _home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
 def test_version(runner: CliRunner) -> None:
     result = runner.invoke(cli.main, ["--version"])
     assert result.exit_code == 0
-    assert "0.2.0" in result.output
+    assert "0.3.0" in result.output
 
 
 def test_init_creates_and_is_idempotent(runner: CliRunner) -> None:
@@ -198,6 +198,20 @@ def test_scan_target_is_file(runner: CliRunner) -> None:
         Path("agent.py").write_text("x = 1\n", encoding="utf-8")
         result = runner.invoke(cli.main, ["scan", "agent.py", "--local-only", "--fail-on", "none"])
         assert result.exit_code == 0
+
+
+def test_scan_honors_autonomyproofignore(runner: CliRunner) -> None:
+    with runner.isolated_filesystem():
+        Path("keep.py").write_text(_VULN, encoding="utf-8")
+        Path("drop.py").write_text(_VULN, encoding="utf-8")
+        Path(".autonomyproofignore").write_text("drop.py\n", encoding="utf-8")
+        result = runner.invoke(
+            cli.main, ["scan", ".", "--local-only", "--fail-on", "none", "--verbose"]
+        )
+        assert result.exit_code == 0
+        # drop.py is ignored; keep.py is still scanned and flagged.
+        assert "keep.py" in result.output
+        assert "drop.py" not in result.output
 
 
 def test_baseline_writes_file(runner: CliRunner) -> None:

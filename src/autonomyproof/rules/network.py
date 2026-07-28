@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import ast
+import ipaddress
 from collections.abc import Iterable
+from urllib.parse import urlsplit
 
 from autonomyproof.astutils import is_model_controlled, keyword, string_literals
 from autonomyproof.models import Finding, Mappings, Severity
@@ -26,7 +28,15 @@ _HTTP_SINKS = {
     "httpx.stream",
     "urllib.request.urlopen",
 }
-_SESSION_METHODS = {"get", "post", "put", "delete", "patch", "request"}
+_SESSION_METHODS = {"get", "post", "put", "delete", "patch", "head", "request"}
+# Constructors whose instances expose the HTTP verbs above.
+_SESSION_CTORS = {
+    "aiohttp.ClientSession",
+    "httpx.Client",
+    "httpx.AsyncClient",
+    "requests.Session",
+    "requests.session",
+}
 
 _SUBPROCESS_SINKS = {
     "subprocess.run",
@@ -36,18 +46,11 @@ _SUBPROCESS_SINKS = {
     "subprocess.check_output",
 }
 
-_SSRF_MARKERS = [
-    "127.0.0.1",
-    "localhost",
-    "0.0.0.0",
-    "::1",
-    "169.254.169.254",
-    "metadata.google.internal",
-    "192.168.",
-    "10.0.",
-    "172.16.",
-    ".internal",
-]
+# Hostnames that resolve to internal/credential endpoints (belt-and-suspenders with
+# the ipaddress classification below, and covers the DNS name for GCP metadata).
+_METADATA_HOSTS = {"169.254.169.254", "metadata.google.internal", "metadata"}
+# Root identifiers that denote trusted, non-model-controlled configuration.
+_CONFIG_ROOTS = {"settings", "config", "cfg", "conf", "constants", "secrets", "env"}
 
 _TOKEN_MARKERS = ("token", "auth", "bearer", "credential", "jwt", "access")
 _NET_MAPPINGS = Mappings(
@@ -57,18 +60,29 @@ _NET_MAPPINGS = Mappings(
 )
 
 
+def _session_ctor(ctx: RuleContext, receiver: ast.expr) -> str | None:
+    """Resolve the constructor behind an HTTP-session receiver, inline or via a variable."""
+    if isinstance(receiver, ast.Call):
+        return ctx.analysis.resolve_call(receiver)
+    if isinstance(receiver, ast.Name):
+        value = ctx.analysis.resolve_local_value(receiver.id, receiver)
+        if isinstance(value, ast.Call):
+            return ctx.analysis.resolve_call(value)
+    return None
+
+
 def http_url_arg(ctx: RuleContext, call: ast.Call) -> ast.expr | None:
     """Return the URL argument if ``call`` is a recognized HTTP request, else ``None``."""
     name = ctx.analysis.resolve_call(call)
     if name in _HTTP_SINKS and call.args:
         return call.args[0]
     func = call.func
-    if isinstance(func, ast.Attribute) and func.attr in _SESSION_METHODS:
-        receiver = func.value
-        if isinstance(receiver, ast.Call):
-            recv_name = ctx.analysis.resolve_call(receiver)
-            if recv_name in {"aiohttp.ClientSession", "httpx.Client", "httpx.AsyncClient"}:
-                return call.args[0] if call.args else None
+    if (
+        isinstance(func, ast.Attribute)
+        and func.attr in _SESSION_METHODS
+        and _session_ctor(ctx, func.value) in _SESSION_CTORS
+    ):
+        return call.args[0] if call.args else None
     return None
 
 
@@ -78,6 +92,102 @@ def is_http_call(ctx: RuleContext, call: ast.Call) -> bool:
     if name in _HTTP_SINKS:
         return True
     return http_url_arg(ctx, call) is not None and bool(call.args)
+
+
+def _root_expr(ctx: RuleContext, node: ast.expr, origin: ast.AST, depth: int = 0) -> ast.expr:
+    """Follow simple ``name = value`` chains to the expression a URL ultimately comes from."""
+    if isinstance(node, ast.Name) and depth < 6:
+        value = ctx.analysis.resolve_local_value(node.id, origin)
+        if value is not None and value is not node:
+            return _root_expr(ctx, value, origin, depth + 1)
+    return node
+
+
+def _config_rooted(node: ast.expr) -> bool:
+    """Whether ``node`` reads from trusted config (settings.X, os.environ, a CONSTANT)."""
+    attrs: list[str] = []
+    current: ast.expr = node
+    while True:
+        if isinstance(current, ast.Attribute):
+            attrs.append(current.attr.lower())
+            current = current.value
+        elif isinstance(current, ast.Subscript):
+            current = current.value
+        elif isinstance(current, ast.Call):
+            current = current.func
+        else:
+            break
+    root_name = current.id if isinstance(current, ast.Name) else ""
+    # os.environ[...] / os.getenv(...) — matched on whole attribute names, not substrings,
+    # so a helper like get_config() is not mistaken for trusted config.
+    if any(attr in {"environ", "getenv"} for attr in attrs):
+        return True
+    if root_name.lower() in _CONFIG_ROOTS:
+        return True
+    return root_name.isupper() and len(root_name) > 1
+
+
+def _url_source(ctx: RuleContext, call: ast.Call, url: ast.expr) -> str:
+    """Classify a model-controlled URL as ``safe`` (config/constant), ``tainted``, or ``unknown``.
+
+    ``safe`` = provably a hardcoded constant or trusted config; ``tainted`` = a tool/function
+    parameter (model/attacker influenced); ``unknown`` = anything we can't prove either way.
+    """
+    root = _root_expr(ctx, url, call)
+    if isinstance(root, ast.Constant) or _config_rooted(root):
+        return "safe"
+    if isinstance(root, ast.Name) and ctx.analysis.is_parameter(root.id, call):
+        return "tainted"
+    return "unknown"
+
+
+def _candidate_hosts(text: str) -> list[str]:
+    """Best-effort host extraction from a URL or bare host string."""
+    text = text.strip()
+    hosts: list[str] = []
+    targets = [text] if "://" in text else [text, "//" + text]
+    for target in targets:
+        try:
+            host = urlsplit(target).hostname
+        except ValueError:
+            host = None
+        if host:
+            hosts.append(host)
+    hosts.append(text)  # bare literal (e.g. IPv6 "::1")
+    return hosts
+
+
+def _ssrf_host(text: str) -> str | None:
+    """Return the internal host referenced by ``text``, or ``None`` if it looks external."""
+    for host in _candidate_hosts(text):
+        lowered = host.lower().rstrip(".")
+        if lowered == "localhost" or lowered in _METADATA_HOSTS:
+            return host
+        if lowered.endswith((".internal", ".local")):
+            return host
+        try:
+            ip = ipaddress.ip_address(host)
+        except ValueError:
+            continue
+        if (
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_reserved
+            or ip.is_unspecified
+        ):
+            return host
+    return None
+
+
+def _url_strings(ctx: RuleContext, call: ast.Call, url: ast.expr) -> list[str]:
+    """String candidates for the request target: literals in the call plus a resolved variable."""
+    strings = list(string_literals(call))
+    if isinstance(url, ast.Name):
+        value = ctx.analysis.resolve_local_value(url.id, call)
+        if value is not None:
+            strings.extend(string_literals(value))
+    return strings
 
 
 class UnrestrictedHttpRule(Rule):
@@ -99,14 +209,19 @@ class UnrestrictedHttpRule(Rule):
     def check(self, ctx: RuleContext) -> Iterable[Finding]:
         for call in ctx.analysis.calls:
             url = http_url_arg(ctx, call)
-            if url is not None and is_model_controlled(url):
-                unbounded = not ctx.config.allowed_domains and keyword(call, "timeout") is None
-                yield self.make_finding(
-                    ctx,
-                    call,
-                    evidence="HTTP request with a model-controlled URL",
-                    severity=Severity.CRITICAL if unbounded else Severity.HIGH,
-                )
+            if url is None or not is_model_controlled(url):
+                continue
+            if _url_source(ctx, call, url) == "safe":
+                # URL provably comes from a hardcoded constant or trusted config,
+                # not from model/attacker input — not what this rule is about.
+                continue
+            unbounded = not ctx.config.allowed_domains and keyword(call, "timeout") is None
+            yield self.make_finding(
+                ctx,
+                call,
+                evidence="HTTP request with a model-controlled URL",
+                severity=Severity.CRITICAL if unbounded else Severity.HIGH,
+            )
 
 
 class SsrfRule(Rule):
@@ -126,17 +241,17 @@ class SsrfRule(Rule):
 
     def check(self, ctx: RuleContext) -> Iterable[Finding]:
         for call in ctx.analysis.calls:
-            if http_url_arg(ctx, call) is None:
+            url = http_url_arg(ctx, call)
+            if url is None:
                 continue
-            for literal in string_literals(call):
-                lowered = literal.lower()
-                marker = next((m for m in _SSRF_MARKERS if m in lowered), None)
-                if marker is not None:
+            for text in _url_strings(ctx, call, url):
+                host = _ssrf_host(text)
+                if host is not None:
                     yield self.make_finding(
                         ctx,
                         call,
-                        evidence=f"Request target references internal host: {marker!r}",
-                        pattern=f"{self.id}:{marker}",
+                        evidence=f"Request target references internal host: {host!r}",
+                        pattern=f"{self.id}:{host}",
                     )
                     break
 

@@ -57,6 +57,19 @@ passthrough, guardrail self-modification, secrets in model context, and more. Ru
 `autonomyproof rules list` for the full catalogue and `autonomyproof rules explain AG001`
 for details.
 
+### How the analysis works (and its limits)
+
+AutonomyProof is AST-based static analysis. It resolves imports and follows **single-function**
+source tracking — so it sees HTTP through session variables (`c = httpx.Client(); c.get(url)`),
+one-line SSRF indirection, and whether a URL comes from a hardcoded constant / trusted config
+(`settings.X`, `os.environ`) versus a tool parameter. SSRF classification uses real
+`ipaddress` range checks, not string matching.
+
+It does **not** yet do cross-function taint or whole-program call-graph reachability, so a value
+laundered through several functions can still be missed. This is deliberately conservative and
+improving; treat findings as "this authority is reachable in the code," not a proof of
+exploitability.
+
 ## Privacy
 
 Scanning happens entirely locally. With a cloud account, only **sanitized** findings
@@ -100,7 +113,7 @@ re-run `autonomyproof baseline .` and commit the updated file in the same PR.
 Use the action directly:
 
 ```yaml
-- uses: autonomyproof/autonomyproof-cli@v0.2.0
+- uses: autonomyproof/autonomyproof-cli@v0.3.0
   with:
     target: .
     fail-on: high
@@ -127,7 +140,7 @@ Gate locally before a commit ever leaves your machine:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/autonomyproof/autonomyproof-cli
-    rev: v0.2.0
+    rev: v0.3.0
     hooks:
       - id: autonomyproof
 ```

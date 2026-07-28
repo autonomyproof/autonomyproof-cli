@@ -47,6 +47,33 @@ def test_from_mapping_defaults() -> None:
     assert config.agent_name is None
     assert config.exclude == DEFAULT_EXCLUDE
     assert config.redact_secrets is True
+    assert config.max_iterations is None
+    assert config.max_subagents is None
+
+
+def test_from_mapping_parses_limits() -> None:
+    config = Config.from_mapping(
+        {
+            "limits": {
+                "maximum_iterations": 50,
+                "maximum_runtime_seconds": 1800,
+                "maximum_subagents": 5,
+            }
+        }
+    )
+    assert config.max_iterations == 50
+    assert config.max_runtime_seconds == 1800
+    assert config.max_subagents == 5
+
+
+def test_from_mapping_rejects_non_int_limit() -> None:
+    with pytest.raises(ConfigError):
+        Config.from_mapping({"limits": {"maximum_iterations": "lots"}})
+
+
+def test_from_mapping_rejects_bool_limit() -> None:
+    with pytest.raises(ConfigError):
+        Config.from_mapping({"limits": {"maximum_subagents": True}})
 
 
 def test_from_mapping_null_section() -> None:
