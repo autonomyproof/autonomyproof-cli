@@ -5,9 +5,10 @@ from __future__ import annotations
 import ast
 from collections.abc import Iterable
 
-from autonomyproof.astutils import is_model_controlled, keyword, string_literals
+from autonomyproof.astutils import is_model_controlled, keyword
 from autonomyproof.models import Finding, Mappings, Severity
 from autonomyproof.rules.base import Rule, RuleContext
+from autonomyproof.rules.sources import classify_source, resolved_strings
 
 _DELETE_SINKS = {"os.remove", "os.unlink", "shutil.rmtree"}
 _FS_MAPPINGS = Mappings(
@@ -36,19 +37,11 @@ def _first_positional(call: ast.Call) -> ast.expr | None:
     return call.args[0] if call.args else None
 
 
-def _resolved_path_strings(ctx: RuleContext, call: ast.Call) -> list[str]:
-    """String candidates for a filesystem call, resolving one-line variable indirection.
-
-    Literals inside the call plus, for any bare name used in it, the constant string it
-    was assigned earlier in the same function — so ``p = "~/.aws"; open(p)`` is not missed.
-    """
-    strings = list(string_literals(call))
-    for node in ast.walk(call):
-        if isinstance(node, ast.Name):
-            value = ctx.analysis.resolve_local_value(node.id, call)
-            if value is not None:
-                strings.extend(string_literals(value))
-    return strings
+def _model_controlled_from_input(ctx: RuleContext, call: ast.Call, arg: ast.expr | None) -> bool:
+    """A path that is model-controlled and not provably a hardcoded constant / trusted config."""
+    if arg is None or not is_model_controlled(arg):
+        return False
+    return classify_source(ctx, call, arg) != "safe"
 
 
 def _mode_is_write(call: ast.Call) -> bool:
@@ -79,7 +72,7 @@ class FilesystemAccessRule(Rule):
         for call in ctx.analysis.calls:
             name = ctx.analysis.resolve_call(call)
             arg = _first_positional(call)
-            if name == "open" and is_model_controlled(arg):
+            if name == "open" and _model_controlled_from_input(ctx, call, arg):
                 severity = Severity.CRITICAL if _mode_is_write(call) else Severity.HIGH
                 yield self.make_finding(
                     ctx,
@@ -87,7 +80,7 @@ class FilesystemAccessRule(Rule):
                     evidence="open() called with a model-controlled path",
                     severity=severity,
                 )
-            elif name in _DELETE_SINKS and is_model_controlled(arg):
+            elif name in _DELETE_SINKS and _model_controlled_from_input(ctx, call, arg):
                 yield self.make_finding(
                     ctx,
                     call,
@@ -110,7 +103,7 @@ class FilesystemAccessRule(Rule):
         ):
             return
         path_arg = _first_positional(receiver)
-        if not is_model_controlled(path_arg):
+        if not _model_controlled_from_input(ctx, call, path_arg):
             return
         writes = func.attr in {"write_text", "write_bytes", "unlink"}
         yield self.make_finding(
@@ -140,7 +133,7 @@ class CredentialPathAccessRule(Rule):
         for call in ctx.analysis.calls:
             if not self._is_fs_sink(ctx, call):
                 continue
-            for literal in _resolved_path_strings(ctx, call):
+            for literal in resolved_strings(ctx, call):
                 lowered = literal.lower()
                 marker = next((m for m in _SENSITIVE_MARKERS if m in lowered), None)
                 if marker is not None:

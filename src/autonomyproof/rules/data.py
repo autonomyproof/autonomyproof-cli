@@ -8,6 +8,7 @@ from collections.abc import Iterable
 from autonomyproof.astutils import is_model_controlled, string_literals
 from autonomyproof.models import Finding, Mappings, Severity
 from autonomyproof.rules.base import Rule, RuleContext
+from autonomyproof.rules.sources import classify_source, resolved_strings
 
 _DB_RECEIVERS = {
     "cursor",
@@ -106,9 +107,12 @@ class ModelControlledSqlRule(Rule):
                 is_model_controlled(arg) and (_receiver_name(func) in _DB_RECEIVERS or wraps_text)
             ):
                 continue
+            if classify_source(ctx, call, arg) == "safe":
+                # Query provably comes from a constant or trusted config, not model input.
+                continue
             mutates = any(
                 mutation in literal.lower()
-                for literal in string_literals(call)
+                for literal in resolved_strings(ctx, call)
                 for mutation in _SQL_MUTATIONS
             )
             yield self.make_finding(
