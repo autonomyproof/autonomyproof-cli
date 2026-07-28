@@ -53,7 +53,8 @@ autonomyproof scan examples/vulnerable-langgraph-agent
 Deterministic rules covering unrestricted shell/`eval`, arbitrary
 filesystem and credential access, SSRF, unbounded network calls, dangerous tools without
 approval, missing execution limits, model-controlled SQL, MCP argument validation, token
-passthrough, guardrail self-modification, secrets in model context, and more. Run
+passthrough, guardrail self-modification, secrets in model context, insecure deserialization
+(pickle/`yaml.load`), disabled TLS verification, server-side template injection, and more. Run
 `autonomyproof rules list` for the full catalogue and `autonomyproof rules explain AG001`
 for details.
 

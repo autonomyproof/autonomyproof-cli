@@ -21,6 +21,11 @@ from autonomyproof.rules.execution import (
     ShellExecutionRule,
 )
 from autonomyproof.rules.filesystem import CredentialPathAccessRule, FilesystemAccessRule
+from autonomyproof.rules.insecure import (
+    DisabledCertVerificationRule,
+    InsecureDeserializationRule,
+    TemplateInjectionRule,
+)
 from autonomyproof.rules.metadata import (
     MissingAgentMetadataRule,
     MissingExecutionLimitsRule,
@@ -54,6 +59,9 @@ _RULE_CLASSES: list[type[Rule]] = [
     MissingTimeoutRule,  # AG018
     DestructiveCommandRule,  # AG019
     MissingAgentMetadataRule,  # AG020
+    InsecureDeserializationRule,  # AG021
+    DisabledCertVerificationRule,  # AG022
+    TemplateInjectionRule,  # AG023
 ]
 
 
