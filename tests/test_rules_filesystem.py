@@ -83,5 +83,12 @@ def test_ag004_clean_path() -> None:
     assert run_rule(CredentialPathAccessRule(), "open('report.txt').read()\n") == []
 
 
+def test_ag004_credential_path_via_variable() -> None:
+    # One-line indirection no longer hides the credential path.
+    code = "def f():\n    p = '/home/u/.aws/credentials'\n    return open(p).read()\n"
+    findings = run_rule(CredentialPathAccessRule(), code)
+    assert findings and findings[0].ruleId == "AG004"
+
+
 def test_ag004_non_fs_call_with_marker_is_clean() -> None:
     assert run_rule(CredentialPathAccessRule(), "print('.ssh/id_rsa')\n") == []

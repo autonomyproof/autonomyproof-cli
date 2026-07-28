@@ -50,3 +50,31 @@ def test_detect_tools_various_decorators() -> None:
 def test_detect_tools_ignores_unrelated_decorator() -> None:
     code = "@staticmethod\ndef a():\n    pass\n@obj[0]\ndef b():\n    pass\n"
     assert detect_tools(_a(code)) == {}
+
+
+def test_detect_tools_from_tools_list() -> None:
+    code = (
+        "def move_money():\n    pass\n"
+        "def read_file():\n    pass\n"
+        "agent = create_agent(tools=[move_money, read_file])\n"
+    )
+    assert set(detect_tools(_a(code))) == {"move_money", "read_file"}
+
+
+def test_detect_tools_from_tool_object() -> None:
+    code = "from langchain.tools import Tool\ndef run():\n    pass\nt = Tool(func=run)\n"
+    assert set(detect_tools(_a(code))) == {"run"}
+
+
+def test_detect_tools_from_structured_tool_from_function() -> None:
+    code = (
+        "from langchain.tools import StructuredTool\n"
+        "def wire():\n    pass\n"
+        "t = StructuredTool.from_function(wire)\n"
+    )
+    assert set(detect_tools(_a(code))) == {"wire"}
+
+
+def test_detect_tools_ignores_non_name_tools_list_entries() -> None:
+    code = "agent = create_agent(tools=[SomeClass(), 'x'])\n"
+    assert detect_tools(_a(code)) == {}
