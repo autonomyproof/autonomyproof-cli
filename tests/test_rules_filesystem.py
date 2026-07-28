@@ -25,6 +25,17 @@ def test_ag003_open_no_args_clean() -> None:
     assert run_rule(FilesystemAccessRule(), "open()\n") == []
 
 
+def test_ag003_constant_path_via_variable_suppressed() -> None:
+    # A hardcoded path assigned to a variable is not model-controlled.
+    assert run_rule(FilesystemAccessRule(), "p = 'out.txt'\nopen(p, 'w')\n") == []
+
+
+def test_ag003_parameter_path_is_critical() -> None:
+    code = "def w(path):\n    return open(path, 'w')\n"
+    findings = run_rule(FilesystemAccessRule(), code)
+    assert findings and findings[0].severity is Severity.CRITICAL
+
+
 def test_ag003_os_remove_is_critical() -> None:
     findings = run_rule(FilesystemAccessRule(), "import os\nos.remove(path)\n")
     assert findings[0].severity is Severity.CRITICAL

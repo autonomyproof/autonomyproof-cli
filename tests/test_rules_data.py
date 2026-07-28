@@ -33,6 +33,22 @@ def test_ag012_text_wrapper_on_non_db_receiver() -> None:
     assert findings[0].ruleId == "AG012"
 
 
+def test_ag012_constant_query_suppressed() -> None:
+    # A hardcoded query assigned to a variable is not model-controlled.
+    assert run_rule(ModelControlledSqlRule(), "q = 'SELECT 1'\ncursor.execute(q)\n") == []
+
+
+def test_ag012_parameter_query_is_flagged() -> None:
+    code = "def run(query):\n    cursor.execute(query)\n"
+    assert run_rule(ModelControlledSqlRule(), code)
+
+
+def test_ag012_mutation_detected_via_variable() -> None:
+    code = "q = 'DELETE FROM t WHERE id='\ncursor.execute(q + user)\n"
+    findings = run_rule(ModelControlledSqlRule(), code)
+    assert findings and findings[0].severity is Severity.CRITICAL
+
+
 def test_ag012_constant_query_clean() -> None:
     assert run_rule(ModelControlledSqlRule(), "cursor.execute('SELECT 1')\n") == []
 
