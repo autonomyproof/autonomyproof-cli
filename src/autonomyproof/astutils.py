@@ -98,6 +98,55 @@ class FileAnalysis:
             current = self.parents.get(current)
         return "<module>"
 
+    def enclosing_scope(self, node: ast.AST) -> ast.AST:
+        """Return the nearest enclosing function or the module for ``node``."""
+        current: ast.AST | None = node
+        while current is not None:
+            if isinstance(current, ast.FunctionDef | ast.AsyncFunctionDef | ast.Module):
+                return current
+            current = self.parents.get(current)
+        return self.tree  # pragma: no cover - every node lives under the module
+
+    def _assignments_to(self, scope: ast.AST, name: str) -> list[ast.expr]:
+        values = [
+            value
+            for stmt in _walk_scope(scope)
+            if (value := _assigned_value(stmt, name)) is not None
+        ]
+        return sorted(values, key=lambda v: getattr(v, "lineno", 0))
+
+    def resolve_local_value(self, name: str, origin: ast.AST) -> ast.expr | None:
+        """Return the value last assigned to ``name`` before ``origin`` in its scope.
+
+        Looks in the enclosing function first, then the module. Only plain
+        ``name = value`` assignments are followed — intentionally shallow, single
+        function, no control-flow reasoning.
+        """
+        origin_line = getattr(origin, "lineno", None)
+        scope = self.enclosing_scope(origin)
+        matches = self._assignments_to(scope, name)
+        if origin_line is not None:
+            before = [v for v in matches if getattr(v, "lineno", 0) <= origin_line]
+            matches = before or matches
+        if not matches and not isinstance(scope, ast.Module):
+            matches = self._assignments_to(self.tree, name)
+        return matches[-1] if matches else None
+
+    def is_parameter(self, name: str, origin: ast.AST) -> bool:
+        """Whether ``name`` is a parameter of the function enclosing ``origin``."""
+        current: ast.AST | None = origin
+        while current is not None:
+            if isinstance(current, ast.FunctionDef | ast.AsyncFunctionDef):
+                args = current.args
+                names = {a.arg for a in (*args.posonlyargs, *args.args, *args.kwonlyargs)}
+                if args.vararg:
+                    names.add(args.vararg.arg)
+                if args.kwarg:
+                    names.add(args.kwarg.arg)
+                return name in names
+            current = self.parents.get(current)
+        return False
+
     def snippet(self, node: ast.AST) -> str:
         """Return the source text of ``node`` (single line via ast.get_source_segment)."""
         segment = ast.get_source_segment(self.source, node)
@@ -107,6 +156,33 @@ class FileAnalysis:
         if 1 <= lineno <= len(self.lines):
             return self.lines[lineno - 1].strip()
         return ""  # pragma: no cover - defensive
+
+
+def _walk_scope(scope: ast.AST) -> list[ast.AST]:
+    """Yield nodes within ``scope``, descending into control flow but not nested scopes.
+
+    Crucially this does NOT descend into nested function/class/lambda bodies, so a
+    variable in one function never resolves to an identically-named local in another.
+    """
+    found: list[ast.AST] = []
+    stack = list(ast.iter_child_nodes(scope))
+    while stack:
+        node = stack.pop()
+        found.append(node)
+        if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef | ast.Lambda):
+            stack.extend(ast.iter_child_nodes(node))
+    return found
+
+
+def _assigned_value(stmt: ast.AST, name: str) -> ast.expr | None:
+    """Return the value ``stmt`` assigns to ``name``, or ``None`` if it does not."""
+    if isinstance(stmt, ast.Assign) and any(
+        isinstance(t, ast.Name) and t.id == name for t in stmt.targets
+    ):
+        return stmt.value
+    if isinstance(stmt, ast.AnnAssign) and isinstance(stmt.target, ast.Name):
+        return stmt.value if stmt.target.id == name else None
+    return None
 
 
 def keyword(call: ast.Call, name: str) -> ast.expr | None:

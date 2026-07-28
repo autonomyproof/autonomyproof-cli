@@ -43,11 +43,110 @@ def test_ag005_session_without_args_clean() -> None:
 
 
 def test_ag005_session_method_on_plain_receiver_clean() -> None:
+    # Undefined receiver with no assignment cannot be proven to be an HTTP session.
     assert run_rule(UnrestrictedHttpRule(), "session.get(url)\n") == []
 
 
 def test_ag005_non_session_call_receiver_clean() -> None:
     assert run_rule(UnrestrictedHttpRule(), "import redis\nredis().get(url)\n") == []
+
+
+def test_ag005_session_variable_is_tracked() -> None:
+    # The common real-world pattern: a client assigned to a variable, then reused.
+    code = "import httpx\nclient = httpx.Client()\nclient.get(url)\n"
+    findings = run_rule(UnrestrictedHttpRule(), code)
+    assert findings and findings[0].ruleId == "AG005"
+
+
+def test_ag005_requests_session_variable_is_tracked() -> None:
+    code = "import requests\ns = requests.Session()\ns.post(url)\n"
+    assert run_rule(UnrestrictedHttpRule(), code)
+
+
+def test_ag005_unknown_variable_receiver_clean() -> None:
+    code = "import redis\nr = redis.Redis()\nr.get(url)\n"
+    assert run_rule(UnrestrictedHttpRule(), code) == []
+
+
+def test_ag005_attribute_receiver_not_proven_session_clean() -> None:
+    # self.session.get(url): the receiver is neither an inline call nor a local variable.
+    code = "def go(self, url):\n    return self.session.get(url)\n"
+    assert run_rule(UnrestrictedHttpRule(), code) == []
+
+
+def test_ag005_call_chain_source_is_kept() -> None:
+    code = "import requests\nrequests.get(get_config().url, timeout=5)\n"
+    assert run_rule(UnrestrictedHttpRule(), code)
+
+
+def test_ag005_config_attribute_is_suppressed() -> None:
+    # The canonical false positive: a URL read from trusted config, not model output.
+    code = "import requests\nurl = settings.COMPANY_API_URL\nrequests.get(url, timeout=5)\n"
+    assert run_rule(UnrestrictedHttpRule(), code) == []
+
+
+def test_ag005_os_environ_is_suppressed() -> None:
+    code = "import os\nimport requests\nrequests.get(os.environ['URL'], timeout=5)\n"
+    assert run_rule(UnrestrictedHttpRule(), code) == []
+
+
+def test_ag005_uppercase_constant_is_suppressed() -> None:
+    code = "import requests\nrequests.get(API_ENDPOINT, timeout=5)\n"
+    assert run_rule(UnrestrictedHttpRule(), code) == []
+
+
+def test_ag005_chained_constant_is_suppressed() -> None:
+    code = "import requests\na = 'https://api.example.com'\nb = a\nrequests.get(b)\n"
+    assert run_rule(UnrestrictedHttpRule(), code) == []
+
+
+def test_ag005_tool_parameter_is_tainted_and_critical() -> None:
+    code = "import requests\ndef fetch(url):\n    return requests.get(url)\n"
+    findings = run_rule(UnrestrictedHttpRule(), code)
+    assert findings and findings[0].severity is Severity.CRITICAL
+
+
+def test_ag005_unknown_source_is_kept() -> None:
+    code = "import requests\ndef go():\n    return requests.get(build_url())\n"
+    assert run_rule(UnrestrictedHttpRule(), code)
+
+
+def test_ag006_private_10_8_range() -> None:
+    # 10.8.0.1 is in 10.0.0.0/8 but the old string-marker "10.0." missed it.
+    assert run_rule(SsrfRule(), "import requests\nrequests.get('http://10.8.0.1/')\n")
+
+
+def test_ag006_private_172_20_range() -> None:
+    assert run_rule(SsrfRule(), "import requests\nrequests.get('http://172.20.1.1/')\n")
+
+
+def test_ag006_variable_indirection() -> None:
+    # One assignment used to defeat the SSRF check entirely.
+    code = "import requests\nu = 'http://169.254.169.254/latest/meta-data/'\nrequests.get(u)\n"
+    findings = run_rule(SsrfRule(), code)
+    assert findings and findings[0].ruleId == "AG006"
+
+
+def test_ag006_ipv6_loopback() -> None:
+    assert run_rule(SsrfRule(), "import requests\nrequests.get('http://[::1]:8000/')\n")
+
+
+def test_ag006_dot_internal_host() -> None:
+    assert run_rule(SsrfRule(), "import requests\nrequests.get('http://db.internal/health')\n")
+
+
+def test_ag006_metadata_hostname() -> None:
+    code = "import requests\nrequests.get('http://metadata.google.internal/token')\n"
+    assert run_rule(SsrfRule(), code)
+
+
+def test_ag006_public_ip_clean() -> None:
+    assert run_rule(SsrfRule(), "import requests\nrequests.get('http://93.184.216.34/')\n") == []
+
+
+def test_ag006_malformed_ipv6_url_is_handled() -> None:
+    # Malformed IPv6 makes urlsplit raise; the scanner degrades gracefully, no crash.
+    assert run_rule(SsrfRule(), "import requests\nrequests.get('http://[::1/')\n") == []
 
 
 def test_ag006_metadata_host() -> None:
