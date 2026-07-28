@@ -116,6 +116,11 @@ class DangerousOperationRule(Rule):
         for node in ast.walk(ctx.analysis.tree):
             if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
                 continue
+            if node.name not in ctx.tool_functions:
+                # AG007 is about operations *exposed to the agent*. Only functions that are
+                # actually registered as model-callable tools qualify — otherwise every
+                # ordinary helper named execute/delete/send in a codebase is flagged.
+                continue
             lowered = node.name.lower()
             op = next((o for o in _DANGEROUS_OPS if o in lowered), None)
             if op is None:

@@ -13,28 +13,37 @@ from helpers import run_rule
 
 
 # --- AG007 --------------------------------------------------------------------
-def test_ag007_dangerous_without_approval() -> None:
+def test_ag007_dangerous_tool_without_approval() -> None:
     findings = run_rule(
-        DangerousOperationRule(), "def delete_user(uid):\n    return db.remove(uid)\n"
+        DangerousOperationRule(), "@tool\ndef delete_user(uid):\n    return db.remove(uid)\n"
     )
     assert findings[0].ruleId == "AG007"
     assert findings[0].toolName == "delete_user"
 
 
-def test_ag007_with_approval_clean() -> None:
+def test_ag007_non_tool_dangerous_name_clean() -> None:
+    # An ordinary helper named delete_user is NOT an agent tool — no longer flagged.
+    code = "def delete_user(uid):\n    return db.remove(uid)\n"
+    assert run_rule(DangerousOperationRule(), code) == []
+
+
+def test_ag007_tool_with_approval_clean() -> None:
     code = (
-        "def deploy(env):\n    if not approved:\n        raise Exception()\n    return run(env)\n"
+        "@tool\ndef deploy(env):\n    if not approved:\n"
+        "        raise Exception()\n    return run(env)\n"
     )
     assert run_rule(DangerousOperationRule(), code) == []
 
 
-def test_ag007_async_with_human_in_the_loop_kwarg_clean() -> None:
-    code = "async def refund(order):\n    return gate(order, human_in_the_loop=True)\n"
+def test_ag007_async_tool_with_human_in_the_loop_kwarg_clean() -> None:
+    code = "@tool\nasync def refund(order):\n    return gate(order, human_in_the_loop=True)\n"
     assert run_rule(DangerousOperationRule(), code) == []
 
 
-def test_ag007_non_dangerous_clean() -> None:
-    assert run_rule(DangerousOperationRule(), "def summarize(text):\n    return text\n") == []
+def test_ag007_non_dangerous_tool_clean() -> None:
+    assert (
+        run_rule(DangerousOperationRule(), "@tool\ndef summarize(text):\n    return text\n") == []
+    )
 
 
 # --- AG009 --------------------------------------------------------------------
