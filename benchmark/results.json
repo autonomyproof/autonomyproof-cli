@@ -1,0 +1,226 @@
+{
+  "repo_count": 10,
+  "total_files": 9014,
+  "total_findings": 4484,
+  "by_rule": {
+    "AG001": 3,
+    "AG002": 35,
+    "AG003": 597,
+    "AG004": 15,
+    "AG005": 150,
+    "AG006": 9,
+    "AG007": 2443,
+    "AG009": 131,
+    "AG011": 47,
+    "AG012": 332,
+    "AG013": 83,
+    "AG014": 3,
+    "AG015": 85,
+    "AG016": 17,
+    "AG017": 18,
+    "AG018": 292,
+    "AG019": 192,
+    "AG020": 10,
+    "AG021": 12,
+    "AG022": 8,
+    "AG023": 2
+  },
+  "per_repo": [
+    {
+      "repo": "mcp-python-sdk",
+      "status": "ok",
+      "files_scanned": 823,
+      "findings": 131,
+      "by_rule": {
+        "AG001": 1,
+        "AG003": 6,
+        "AG007": 84,
+        "AG009": 5,
+        "AG013": 23,
+        "AG015": 1,
+        "AG018": 7,
+        "AG019": 3,
+        "AG020": 1
+      }
+    },
+    {
+      "repo": "crewai",
+      "status": "ok",
+      "files_scanned": 1278,
+      "findings": 712,
+      "by_rule": {
+        "AG002": 5,
+        "AG003": 164,
+        "AG004": 8,
+        "AG005": 32,
+        "AG007": 358,
+        "AG009": 10,
+        "AG012": 5,
+        "AG013": 14,
+        "AG014": 2,
+        "AG015": 4,
+        "AG017": 2,
+        "AG018": 73,
+        "AG019": 33,
+        "AG020": 1,
+        "AG021": 1
+      }
+    },
+    {
+      "repo": "langgraph",
+      "status": "ok",
+      "files_scanned": 447,
+      "findings": 482,
+      "by_rule": {
+        "AG003": 52,
+        "AG004": 1,
+        "AG005": 8,
+        "AG006": 2,
+        "AG007": 173,
+        "AG009": 37,
+        "AG011": 44,
+        "AG012": 90,
+        "AG016": 1,
+        "AG018": 3,
+        "AG019": 69,
+        "AG020": 1,
+        "AG021": 1
+      }
+    },
+    {
+      "repo": "openai-agents",
+      "status": "ok",
+      "files_scanned": 840,
+      "findings": 467,
+      "by_rule": {
+        "AG002": 6,
+        "AG003": 28,
+        "AG005": 9,
+        "AG007": 286,
+        "AG009": 32,
+        "AG012": 9,
+        "AG013": 8,
+        "AG015": 6,
+        "AG016": 8,
+        "AG017": 2,
+        "AG018": 30,
+        "AG019": 36,
+        "AG020": 1,
+        "AG022": 6
+      }
+    },
+    {
+      "repo": "pydantic-ai",
+      "status": "ok",
+      "files_scanned": 599,
+      "findings": 236,
+      "by_rule": {
+        "AG002": 7,
+        "AG003": 17,
+        "AG005": 7,
+        "AG006": 1,
+        "AG007": 155,
+        "AG009": 26,
+        "AG012": 4,
+        "AG013": 1,
+        "AG015": 2,
+        "AG017": 2,
+        "AG018": 9,
+        "AG020": 1,
+        "AG021": 4
+      }
+    },
+    {
+      "repo": "smolagents",
+      "status": "ok",
+      "files_scanned": 73,
+      "findings": 106,
+      "by_rule": {
+        "AG002": 6,
+        "AG003": 28,
+        "AG005": 16,
+        "AG007": 15,
+        "AG009": 1,
+        "AG012": 2,
+        "AG013": 2,
+        "AG015": 3,
+        "AG018": 27,
+        "AG020": 1,
+        "AG021": 3,
+        "AG023": 2
+      }
+    },
+    {
+      "repo": "llama-deploy",
+      "status": "ok",
+      "files_scanned": 108,
+      "findings": 108,
+      "by_rule": {
+        "AG003": 30,
+        "AG005": 3,
+        "AG006": 5,
+        "AG007": 56,
+        "AG018": 11,
+        "AG020": 1,
+        "AG022": 2
+      }
+    },
+    {
+      "repo": "autogen-core",
+      "status": "ok",
+      "files_scanned": 546,
+      "findings": 226,
+      "by_rule": {
+        "AG002": 3,
+        "AG003": 86,
+        "AG007": 97,
+        "AG009": 5,
+        "AG011": 1,
+        "AG012": 1,
+        "AG017": 10,
+        "AG018": 16,
+        "AG019": 4,
+        "AG020": 1,
+        "AG021": 2
+      }
+    },
+    {
+      "repo": "mcp-servers",
+      "status": "ok",
+      "files_scanned": 14,
+      "findings": 13,
+      "by_rule": {
+        "AG003": 9,
+        "AG018": 3,
+        "AG020": 1
+      }
+    },
+    {
+      "repo": "agno",
+      "status": "ok",
+      "files_scanned": 4286,
+      "findings": 2003,
+      "by_rule": {
+        "AG001": 2,
+        "AG002": 8,
+        "AG003": 177,
+        "AG004": 6,
+        "AG005": 75,
+        "AG006": 1,
+        "AG007": 1219,
+        "AG009": 15,
+        "AG011": 2,
+        "AG012": 221,
+        "AG013": 35,
+        "AG014": 1,
+        "AG015": 69,
+        "AG016": 8,
+        "AG017": 2,
+        "AG018": 113,
+        "AG019": 47,
+        "AG020": 1,
+        "AG021": 1
+      }
+    }
+  ]
+}

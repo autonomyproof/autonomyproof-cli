@@ -71,6 +71,14 @@ laundered through several functions can still be missed. This is deliberately co
 improving; treat findings as "this authority is reachable in the code," not a proof of
 exploitability.
 
+### Benchmark (we publish our own false-positive rate)
+
+We run the scanner against 10 real open-source agent/MCP/framework repos (~9,000 files) and
+publish the per-rule counts, an author-labeled precision read, and the known-noisy rules — see
+[benchmark/RESULTS.md](benchmark/RESULTS.md). Reproduce with `python benchmark/run.py`. The
+benchmark drives the accuracy backlog: it's what caught (and let us fix) the AG023 and AG012
+false-positive classes, and it's why we currently recommend excluding AG007 from CI gating.
+
 ## Privacy
 
 Scanning happens entirely locally. With a cloud account, only **sanitized** findings
@@ -114,7 +122,7 @@ re-run `autonomyproof baseline .` and commit the updated file in the same PR.
 Use the action directly:
 
 ```yaml
-- uses: autonomyproof/autonomyproof-cli@v0.5.0
+- uses: autonomyproof/autonomyproof-cli@v0.6.0
   with:
     target: .
     fail-on: high
@@ -141,7 +149,7 @@ Gate locally before a commit ever leaves your machine:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/autonomyproof/autonomyproof-cli
-    rev: v0.5.0
+    rev: v0.6.0
     hooks:
       - id: autonomyproof
 ```

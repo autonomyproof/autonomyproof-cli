@@ -49,6 +49,20 @@ def test_ag012_mutation_detected_via_variable() -> None:
     assert findings and findings[0].severity is Severity.CRITICAL
 
 
+def test_ag012_parameterized_query_suppressed() -> None:
+    # Bound parameters (second arg) mean the query string is not interpolated.
+    assert run_rule(ModelControlledSqlRule(), "cursor.execute(query, values)\n") == []
+
+
+def test_ag012_params_kwarg_suppressed() -> None:
+    assert run_rule(ModelControlledSqlRule(), "cursor.execute(query, params=vals)\n") == []
+
+
+def test_ag012_constant_sql_in_text_suppressed() -> None:
+    code = "conn.execute(text('CREATE TABLE items (id INTEGER)'))\n"
+    assert run_rule(ModelControlledSqlRule(), code) == []
+
+
 def test_ag012_constant_query_clean() -> None:
     assert run_rule(ModelControlledSqlRule(), "cursor.execute('SELECT 1')\n") == []
 

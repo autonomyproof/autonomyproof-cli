@@ -25,6 +25,12 @@ _SAFE_YAML_LOADERS = {"SafeLoader", "CSafeLoader"}
 _UNVERIFIED_SSL = {"ssl._create_unverified_context"}
 _SSTI_RENDER_STRING = {"flask.render_template_string", "render_template_string"}
 _SSTI_TEMPLATE_CTORS = {"jinja2.Template", "Template"}
+_SSTI_ENVIRONMENTS = {
+    "Environment",
+    "SandboxedEnvironment",
+    "ImmutableSandboxedEnvironment",
+    "NativeEnvironment",
+}
 
 _INSECURE_MAPPINGS = Mappings(
     owaspAgentic=["Tool misuse", "Code execution"],
@@ -131,12 +137,25 @@ class TemplateInjectionRule(Rule):
                 yield self.make_finding(
                     ctx, call, evidence="Template built from a model-controlled string"
                 )
-            elif self._is_from_string(call) and is_model_controlled(first):
+            elif self._is_template_from_string(ctx, call) and is_model_controlled(first):
                 yield self.make_finding(
                     ctx, call, evidence="Environment.from_string() with a model-controlled template"
                 )
 
     @staticmethod
-    def _is_from_string(call: ast.Call) -> bool:
+    def _is_template_from_string(ctx: RuleContext, call: ast.Call) -> bool:
+        """A jinja ``Environment(...).from_string`` / ``env.from_string`` — not any from_string.
+
+        Scoped so unrelated ``X.from_string`` deserializers (e.g. RunState.from_string) don't match.
+        """
         func = call.func
-        return isinstance(func, ast.Attribute) and func.attr == "from_string"
+        if not (isinstance(func, ast.Attribute) and func.attr == "from_string"):
+            return False
+        receiver = func.value
+        if isinstance(receiver, ast.Call):
+            name = ctx.analysis.resolve_call(receiver) or ""
+            return name.rsplit(".", 1)[-1] in _SSTI_ENVIRONMENTS
+        if isinstance(receiver, ast.Name):
+            lowered = receiver.id.lower()
+            return "env" in lowered or "jinja" in lowered
+        return False
