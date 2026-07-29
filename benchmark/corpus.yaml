@@ -1,0 +1,133 @@
+# Ground-truth labeled corpus. Each case targets ONE rule and is labeled:
+#   positive = the target rule SHOULD fire   |   negative = it MUST NOT fire
+# Evaluated by benchmark/corpus_eval.py (precision + recall per rule).
+cases:
+  # --- AG001 shell ---
+  - {id: ag001-pos-shelltrue, rule: AG001, label: positive, code: "import subprocess\ndef r(cmd):\n    return subprocess.run(cmd, shell=True)\n"}
+  - {id: ag001-pos-ossystem, rule: AG001, label: positive, code: "import os\ndef r(cmd):\n    return os.system(cmd)\n"}
+  - {id: ag001-neg-list, rule: AG001, label: negative, code: "import subprocess\nsubprocess.run(['ls', '-la'])\n"}
+  - {id: ag001-neg-shellfalse, rule: AG001, label: negative, code: "import subprocess\ndef r(cmd):\n    return subprocess.run(cmd, shell=False)\n"}
+
+  # --- AG002 dynamic code ---
+  - {id: ag002-pos-eval, rule: AG002, label: positive, code: "def r(x):\n    return eval(x)\n"}
+  - {id: ag002-pos-exec, rule: AG002, label: positive, code: "def r(code):\n    exec(code)\n"}
+  - {id: ag002-neg-literal, rule: AG002, label: negative, code: "import ast\ndef r(x):\n    return ast.literal_eval(x)\n"}
+  - {id: ag002-neg-json, rule: AG002, label: negative, code: "import json\ndef r(x):\n    return json.loads(x)\n"}
+
+  # --- AG003 filesystem ---
+  - {id: ag003-pos-openwrite, rule: AG003, label: positive, code: "def w(path):\n    return open(path, 'w')\n"}
+  - {id: ag003-pos-remove, rule: AG003, label: positive, code: "import os\ndef d(p):\n    os.remove(p)\n"}
+  - {id: ag003-neg-constant, rule: AG003, label: negative, code: "open('report.txt').read()\n"}
+  - {id: ag003-neg-configpath, rule: AG003, label: negative, code: "import settings\ndef w():\n    p = settings.LOG_PATH\n    return open(p, 'w')\n"}
+
+  # --- AG004 credential paths ---
+  - {id: ag004-pos-ssh, rule: AG004, label: positive, code: "open('/home/u/.ssh/id_rsa').read()\n"}
+  - {id: ag004-pos-indirect, rule: AG004, label: positive, code: "def f():\n    p = '/root/.aws/credentials'\n    return open(p).read()\n"}
+  - {id: ag004-neg-normal, rule: AG004, label: negative, code: "open('data/output.txt').read()\n"}
+
+  # --- AG005 unrestricted HTTP ---
+  - {id: ag005-pos-param, rule: AG005, label: positive, code: "import requests\ndef fetch(url):\n    return requests.get(url)\n"}
+  - {id: ag005-pos-session, rule: AG005, label: positive, code: "import httpx\nc = httpx.Client()\ndef fetch(url):\n    return c.get(url)\n"}
+  - {id: ag005-neg-constant, rule: AG005, label: negative, code: "import requests\nrequests.get('https://api.example.com', timeout=5)\n"}
+  - {id: ag005-neg-config, rule: AG005, label: negative, code: "import requests, settings\ndef f():\n    url = settings.API_URL\n    return requests.get(url, timeout=5)\n"}
+  - {id: ag005-neg-environ, rule: AG005, label: negative, code: "import os, requests\nrequests.get(os.environ['URL'], timeout=5)\n"}
+
+  # --- AG006 SSRF ---
+  - {id: ag006-pos-metadata, rule: AG006, label: positive, code: "import requests\nrequests.get('http://169.254.169.254/latest/meta-data/')\n"}
+  - {id: ag006-pos-private, rule: AG006, label: positive, code: "import requests\nrequests.get('http://10.8.0.1/admin')\n"}
+  - {id: ag006-pos-indirect, rule: AG006, label: positive, code: "import requests\ndef s():\n    u = 'http://metadata.google.internal/token'\n    return requests.get(u)\n"}
+  - {id: ag006-neg-public, rule: AG006, label: negative, code: "import requests\nrequests.get('https://api.example.com/v1')\n"}
+  - {id: ag006-neg-publicip, rule: AG006, label: negative, code: "import requests\nrequests.get('http://93.184.216.34/')\n"}
+
+  # --- AG007 dangerous op without approval (tool-scoped) ---
+  - {id: ag007-pos-tool, rule: AG007, label: positive, code: "@tool\ndef delete_user(uid):\n    return db.remove(uid)\n"}
+  - {id: ag007-neg-nontool, rule: AG007, label: negative, code: "def delete_user(uid):\n    return db.remove(uid)\n"}
+  - {id: ag007-neg-approval, rule: AG007, label: negative, code: "@tool\ndef refund(order):\n    return gate(order, human_in_the_loop=True)\n"}
+
+  # --- AG012 model-controlled SQL ---
+  - {id: ag012-pos-param, rule: AG012, label: positive, code: "def run(query):\n    cursor.execute(query)\n"}
+  - {id: ag012-neg-parameterized, rule: AG012, label: negative, code: "cursor.execute(query, values)\n"}
+  - {id: ag012-neg-constant, rule: AG012, label: negative, code: "q = 'SELECT 1'\ncursor.execute(q)\n"}
+
+  # --- AG014 token passthrough ---
+  - {id: ag014-pos, rule: AG014, label: positive, code: "import requests\ndef p(url, token):\n    return requests.get(url, headers={'Authorization': token})\n"}
+  - {id: ag014-neg-static, rule: AG014, label: negative, code: "import requests\nrequests.get(url, headers={'Authorization': 'Bearer static'})\n"}
+
+  # --- AG017 secret in context ---
+  - {id: ag017-pos, rule: AG017, label: positive, code: "def p(api_key):\n    return f'You are an agent. Use this api_key: {api_key}'\n"}
+  - {id: ag017-neg, rule: AG017, label: negative, code: "def p(name):\n    return f'You are an agent. The user is {name}'\n"}
+
+  # --- AG018 missing timeout ---
+  - {id: ag018-pos-http, rule: AG018, label: positive, code: "import requests\ndef f(url):\n    return requests.get(url)\n"}
+  - {id: ag018-pos-subprocess, rule: AG018, label: positive, code: "import subprocess\nsubprocess.run(['x'])\n"}
+  - {id: ag018-neg-timeout, rule: AG018, label: negative, code: "import requests\nrequests.get(url, timeout=5)\n"}
+
+  # --- AG019 destructive command ---
+  - {id: ag019-pos-rmrf, rule: AG019, label: positive, code: "CLEANUP = 'rm -rf /var/data'\n"}
+  - {id: ag019-neg, rule: AG019, label: negative, code: "MSG = 'list the files in the directory'\n"}
+
+  # --- AG021 insecure deserialization ---
+  - {id: ag021-pos-pickle, rule: AG021, label: positive, code: "import pickle\ndef load(b):\n    return pickle.loads(b)\n"}
+  - {id: ag021-pos-yaml, rule: AG021, label: positive, code: "import yaml\ndef load(x):\n    return yaml.load(x)\n"}
+  - {id: ag021-neg-safeload, rule: AG021, label: negative, code: "import yaml\ndef load(x):\n    return yaml.safe_load(x)\n"}
+  - {id: ag021-neg-yamlsafeloader, rule: AG021, label: negative, code: "import yaml\ndef load(x):\n    return yaml.load(x, Loader=yaml.SafeLoader)\n"}
+
+  # --- AG022 disabled TLS verify ---
+  - {id: ag022-pos, rule: AG022, label: positive, code: "import requests\nrequests.get(u, verify=False)\n"}
+  - {id: ag022-neg-true, rule: AG022, label: negative, code: "import requests\nrequests.get(u, verify=True)\n"}
+  - {id: ag022-neg-default, rule: AG022, label: negative, code: "import requests\nrequests.get(u)\n"}
+
+  # --- AG023 template injection ---
+  - {id: ag023-pos-jinja, rule: AG023, label: positive, code: "import jinja2\ndef r(tpl):\n    return jinja2.Template(tpl).render()\n"}
+  - {id: ag023-pos-renderstring, rule: AG023, label: positive, code: "from flask import render_template_string\ndef r(t):\n    return render_template_string(t)\n"}
+  - {id: ag023-neg-fromstring-const, rule: AG023, label: negative, code: "def r(env):\n    return env.from_string('static template')\n"}
+  - {id: ag023-neg-runstate, rule: AG023, label: negative, code: "def r(blob):\n    return RunState.from_string(agent, blob)\n"}
+
+  # --- AG024 dangerous framework flags ---
+  - {id: ag024-pos-deser, rule: AG024, label: positive, code: "FAISS.load_local(path, emb, allow_dangerous_deserialization=True)\n"}
+  - {id: ag024-pos-trust, rule: AG024, label: positive, code: "AutoModel.from_pretrained(name, trust_remote_code=True)\n"}
+  - {id: ag024-neg-false, rule: AG024, label: negative, code: "FAISS.load_local(path, emb, allow_dangerous_deserialization=False)\n"}
+  - {id: ag024-neg-nonliteral, rule: AG024, label: negative, code: "make_agent(allow_dangerous_code=flag)\n"}
+
+  # --- AG025 interpreter tools ---
+  - {id: ag025-pos-repl, rule: AG025, label: positive, code: "tool = PythonREPLTool()\n"}
+  - {id: ag025-pos-shell, rule: AG025, label: positive, code: "from langchain_community.tools import ShellTool\nt = ShellTool()\n"}
+  - {id: ag025-pos-loadtools, rule: AG025, label: positive, code: "tools = load_tools(['python_repl', 'llm-math'])\n"}
+  - {id: ag025-neg-approval, rule: AG025, label: negative, code: "t = ShellTool(executor=run, needs_approval=True)\n"}
+  - {id: ag025-neg-safetool, rule: AG025, label: negative, code: "t = SummarizerTool()\n"}
+
+  # --- AG026 known-vulnerable dependency (version-validated) ---
+  - {id: ag026-pos-vuln, rule: AG026, label: positive, code: "x = 1\n", files: {"requirements.txt": "langchain-core==0.3.80\n"}}
+  - {id: ag026-pos-vuln1x, rule: AG026, label: positive, code: "x = 1\n", files: {"requirements.txt": "langchain-core==1.2.4\n"}}
+  - {id: ag026-neg-patched, rule: AG026, label: negative, code: "x = 1\n", files: {"requirements.txt": "langchain-core==0.3.85\n"}}
+  - {id: ag026-neg-nodep, rule: AG026, label: negative, code: "x = 1\n", files: {"requirements.txt": "requests==2.31.0\n"}}
+
+  # --- AG009 excessive / unbounded limits ---
+  - {id: ag009-pos-recursion, rule: AG009, label: positive, code: "import sys\nsys.setrecursionlimit(5000)\n"}
+  - {id: ag009-pos-whiletrue, rule: AG009, label: positive, code: "def loop():\n    while True:\n        step()\n"}
+  - {id: ag009-neg-recursion, rule: AG009, label: negative, code: "import sys\nsys.setrecursionlimit(500)\n"}
+  - {id: ag009-neg-whilebreak, rule: AG009, label: negative, code: "def loop():\n    while True:\n        if done():\n            break\n"}
+
+  # --- AG011 memory isolation ---
+  - {id: ag011-pos, rule: AG011, label: positive, code: "mem = ConversationBufferMemory()\n"}
+  - {id: ag011-neg-session, rule: AG011, label: negative, code: "mem = ConversationBufferMemory(session_id=user)\n"}
+  - {id: ag011-neg-namespace, rule: AG011, label: negative, code: "store = InMemoryStore(namespace=tenant)\n"}
+
+  # --- extra edge cases for high-value rules ---
+  - {id: ag001-pos-checkoutput, rule: AG001, label: positive, code: "import subprocess\ndef r(cmd):\n    return subprocess.check_output(cmd, shell=True)\n"}
+  - {id: ag005-neg-chained-const, rule: AG005, label: negative, code: "import requests\na = 'https://api.example.com'\nb = a\nrequests.get(b, timeout=5)\n"}
+  - {id: ag006-pos-ipv6-loopback, rule: AG006, label: positive, code: "import requests\nrequests.get('http://[::1]:8000/')\n"}
+  - {id: ag006-pos-172range, rule: AG006, label: positive, code: "import requests\nrequests.get('http://172.20.1.1/internal')\n"}
+  - {id: ag012-pos-textwrap, rule: AG012, label: positive, code: "def run(sql):\n    return session.execute(text(sql))\n"}
+  - {id: ag012-neg-textconst, rule: AG012, label: negative, code: "conn.execute(text('CREATE TABLE t (id INTEGER)'))\n"}
+  - {id: ag021-pos-torch, rule: AG021, label: positive, code: "import torch\ndef load(f):\n    return torch.load(f)\n"}
+  - {id: ag022-pos-checkhostname, rule: AG022, label: positive, code: "ctx.wrap_socket(sock, check_hostname=False)\n"}
+  - {id: ag024-pos-allowedobjects, rule: AG024, label: positive, code: "load(data, allowed_objects='all')\n"}
+  - {id: ag024-pos-secretsfromenv, rule: AG024, label: positive, code: "dumps(obj, secrets_from_env=True)\n"}
+  - {id: ag024-neg-allowedcore, rule: AG024, label: negative, code: "load(data, allowed_objects='core')\n"}
+  - {id: ag025-pos-computer, rule: AG025, label: positive, code: "agent = build(tools=[ComputerTool(computer=cfg)])\n"}
+  - {id: ag025-neg-loadsafe, rule: AG025, label: negative, code: "tools = load_tools(['llm-math', 'serpapi'])\n"}
+  - {id: ag003-pos-pathwrite, rule: AG003, label: positive, code: "from pathlib import Path\ndef w(p):\n    Path(p).write_text('x')\n"}
+  - {id: ag004-neg-report, rule: AG004, label: negative, code: "open('logs/app.log').read()\n"}
+  - {id: ag018-neg-subprocess-timeout, rule: AG018, label: negative, code: "import subprocess\nsubprocess.run(['x'], timeout=5)\n"}
+  - {id: ag023-neg-const-template, rule: AG023, label: negative, code: "import jinja2\njinja2.Template('<b>{{ x }}</b>')\n"}
