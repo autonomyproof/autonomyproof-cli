@@ -58,7 +58,8 @@ passthrough, guardrail self-modification, secrets in model context, insecure des
 framework flags (`allow_dangerous_*`, `trust_remote_code`), code/shell interpreter tools
 (`PythonREPLTool`, `ShellTool`), and more. Run
 `autonomyproof rules list` for the full catalogue and `autonomyproof rules explain AG001`
-for details.
+for details. Every finding carries **OWASP Agentic, NIST AI RMF, ISO 42001, MITRE
+ATLAS/ATT&CK, and CVE** mappings where a genuine one exists.
 
 ### How the analysis works (and its limits)
 

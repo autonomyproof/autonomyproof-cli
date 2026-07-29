@@ -113,7 +113,9 @@ _TEMPLATE = """<!doctype html>
       <p class="muted"><strong>Mappings:</strong>
         OWASP: {{ f.mappings.owaspAgentic|join(', ') }} ·
         NIST: {{ f.mappings.nistAiRmf|join(', ') }} ·
-        ISO 42001: {{ f.mappings.iso42001Alignment|join(', ') }}</p>
+        ISO 42001: {{ f.mappings.iso42001Alignment|join(', ') }}
+        {% if f.mappings.mitre %} · MITRE: {{ f.mappings.mitre|join(', ') }}{% endif %}
+        {% if f.mappings.cve %} · CVE: {{ f.mappings.cve|join(', ') }}{% endif %}</p>
       <p class="muted">Fingerprint: <code>{{ f.fingerprint }}</code></p>
     </div>
     {% endfor %}

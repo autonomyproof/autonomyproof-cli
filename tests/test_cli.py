@@ -63,6 +63,19 @@ def test_rules_explain_unknown(runner: CliRunner) -> None:
     assert "Unknown rule" in result.output
 
 
+def test_rules_explain_shows_mitre_and_cve(runner: CliRunner) -> None:
+    result = runner.invoke(cli.main, ["rules", "explain", "AG024"])
+    assert "MITRE:" in result.output
+    assert "CVE-2025-68664" in result.output
+
+
+def test_rules_explain_without_mitre_or_cve(runner: CliRunner) -> None:
+    # AG020 has no MITRE/CVE mapping, so those lines are omitted.
+    result = runner.invoke(cli.main, ["rules", "explain", "AG020"])
+    assert "MITRE:" not in result.output
+    assert "CVE:" not in result.output
+
+
 def test_config_validate_ok(runner: CliRunner) -> None:
     with runner.isolated_filesystem():
         Path("autonomyproof.yaml").write_text("project:\n  name: x\n", encoding="utf-8")

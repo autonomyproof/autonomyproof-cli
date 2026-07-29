@@ -326,3 +326,7 @@ def rules_explain(rule_id: str) -> None:
     click.echo("Remediation:")
     for step in rule.remediation:
         click.echo(f"  - {step}")
+    if rule.mappings.mitre:
+        click.echo(f"MITRE: {', '.join(rule.mappings.mitre)}")
+    if rule.mappings.cve:
+        click.echo(f"CVE: {', '.join(rule.mappings.cve)}")

@@ -13,6 +13,8 @@ def test_ag024_allow_dangerous_deserialization_critical() -> None:
     findings = run_rule(DangerousFrameworkFlagRule(), code)
     assert findings[0].ruleId == "AG024"
     assert findings[0].severity is Severity.CRITICAL
+    assert "AML.T0010" in findings[0].mappings.mitre
+    assert "CVE-2025-68664" in findings[0].mappings.cve
 
 
 def test_ag024_allow_dangerous_code_critical() -> None:

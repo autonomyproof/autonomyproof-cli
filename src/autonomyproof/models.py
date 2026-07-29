@@ -32,11 +32,18 @@ class Severity(enum.Enum):
 
 @dataclass(frozen=True)
 class Mappings:
-    """Compliance / framework mappings attached to a finding."""
+    """Compliance / framework mappings attached to a finding.
+
+    ``mitre`` holds MITRE technique IDs — ATLAS (``AML.T*``) for AI/ML-specific
+    techniques and ATT&CK (``T*``) for classic ones. ``cve`` lists directly-related
+    CVE IDs. Both are populated only where a genuine mapping exists.
+    """
 
     owaspAgentic: list[str] = field(default_factory=list)
     nistAiRmf: list[str] = field(default_factory=list)
     iso42001Alignment: list[str] = field(default_factory=list)
+    mitre: list[str] = field(default_factory=list)
+    cve: list[str] = field(default_factory=list)
 
 
 @dataclass

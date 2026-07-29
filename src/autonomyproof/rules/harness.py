@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import ast
 from collections.abc import Iterable
+from dataclasses import replace
 
 from autonomyproof.astutils import is_true_literal
 from autonomyproof.models import Finding, Mappings, Severity
@@ -72,7 +73,12 @@ class DangerousFrameworkFlagRule(Rule):
         "Use safe loaders and a bound deserialization allowlist",
         "Never enable trust_remote_code or allow_dangerous_* on untrusted input",
     ]
-    mappings = _HARNESS_MAPPINGS
+    # ATLAS supply-chain / user-execution + the LangChain serialization CVEs.
+    mappings = replace(
+        _HARNESS_MAPPINGS,
+        mitre=["AML.T0010", "AML.T0011"],
+        cve=["CVE-2025-68664", "CVE-2026-44843"],
+    )
 
     def check(self, ctx: RuleContext) -> Iterable[Finding]:
         for call in ctx.analysis.calls:
@@ -114,7 +120,7 @@ class InterpreterToolExposedRule(Rule):
         "Run any code execution in an isolated sandbox with no host or credential access",
         "Require human approval before code/shell tools run",
     ]
-    mappings = _HARNESS_MAPPINGS
+    mappings = replace(_HARNESS_MAPPINGS, mitre=["T1059"])  # Command and Scripting Interpreter
 
     def check(self, ctx: RuleContext) -> Iterable[Finding]:
         for call in ctx.analysis.calls:

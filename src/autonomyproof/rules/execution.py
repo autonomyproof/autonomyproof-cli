@@ -53,6 +53,7 @@ class ShellExecutionRule(Rule):
         owaspAgentic=["Tool misuse", "Identity and privilege abuse"],
         nistAiRmf=["Govern", "Measure", "Manage"],
         iso42001Alignment=["Operational control", "Monitoring", "Accountability"],
+        mitre=["T1059"],  # Command and Scripting Interpreter
     )
 
     def check(self, ctx: RuleContext) -> Iterable[Finding]:
@@ -81,6 +82,7 @@ class DynamicCodeExecutionRule(Rule):
         owaspAgentic=["Tool misuse", "Code execution"],
         nistAiRmf=["Measure", "Manage"],
         iso42001Alignment=["Operational control"],
+        mitre=["T1059.006"],  # Command and Scripting Interpreter: Python
     )
 
     def check(self, ctx: RuleContext) -> Iterable[Finding]:
