@@ -54,7 +54,9 @@ Deterministic rules covering unrestricted shell/`eval`, arbitrary
 filesystem and credential access, SSRF, unbounded network calls, dangerous tools without
 approval, missing execution limits, model-controlled SQL, MCP argument validation, token
 passthrough, guardrail self-modification, secrets in model context, insecure deserialization
-(pickle/`yaml.load`), disabled TLS verification, server-side template injection, and more. Run
+(pickle/`yaml.load`), disabled TLS verification, server-side template injection, dangerous
+framework flags (`allow_dangerous_*`, `trust_remote_code`), code/shell interpreter tools
+(`PythonREPLTool`, `ShellTool`), and more. Run
 `autonomyproof rules list` for the full catalogue and `autonomyproof rules explain AG001`
 for details.
 
@@ -123,7 +125,7 @@ re-run `autonomyproof baseline .` and commit the updated file in the same PR.
 Use the action directly:
 
 ```yaml
-- uses: autonomyproof/autonomyproof-cli@v0.7.0
+- uses: autonomyproof/autonomyproof-cli@v0.8.0
   with:
     target: .
     fail-on: high
@@ -150,7 +152,7 @@ Gate locally before a commit ever leaves your machine:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/autonomyproof/autonomyproof-cli
-    rev: v0.7.0
+    rev: v0.8.0
     hooks:
       - id: autonomyproof
 ```
