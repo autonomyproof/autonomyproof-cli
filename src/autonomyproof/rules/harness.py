@@ -15,6 +15,29 @@ from autonomyproof.cve import known_vulnerabilities
 from autonomyproof.models import Finding, Mappings, Severity
 from autonomyproof.rules.base import ProjectContext, Rule, RuleContext
 
+# LangChain constructors that build an agent/chain which executes model-generated code or SQL.
+_CODE_EXEC_AGENTS = {
+    "create_pandas_dataframe_agent",
+    "create_csv_agent",
+    "create_python_agent",
+    "create_spark_dataframe_agent",
+    "create_xorbits_agent",
+    "create_sql_agent",
+    "PALChain",
+    "LLMMathChain",
+    "LLMBashChain",
+    "SQLDatabaseChain",
+}
+# Prebuilt tools that make unrestricted outbound HTTP requests (SSRF surface).
+_HTTP_REQUEST_TOOLS = {
+    "RequestsGetTool",
+    "RequestsPostTool",
+    "RequestsPutTool",
+    "RequestsDeleteTool",
+    "RequestsPatchTool",
+    "TextRequestsWrapper",
+}
+
 # Explicit opt-in flags that enable code execution, unsafe deserialization, or secret leaks.
 # Each maps to the severity of the capability it unlocks.
 _DANGEROUS_TRUE_FLAGS = {
@@ -229,3 +252,67 @@ class SandboxDisabledRule(Rule):
             ):
                 return True
         return False
+
+
+def _matched_segment(ctx: RuleContext, call: ast.Call, names: set[str]) -> str | None:
+    """Return the first dotted segment of the callee that is in ``names``.
+
+    Matches both direct constructors (``PALChain(...)``) and factory methods
+    (``PALChain.from_math_prompt(...)``), where the class name is a middle segment.
+    """
+    resolved = ctx.analysis.resolve_call(call) or ""
+    return next((seg for seg in resolved.split(".") if seg in names), None)
+
+
+class CodeExecutingAgentRule(Rule):
+    """AG028 — Agent or chain that executes model-generated code or SQL."""
+
+    id = "AG028"
+    name = "Code-executing agent or chain"
+    default_severity = Severity.CRITICAL
+    description = "A framework constructor builds an agent/chain that runs model-generated code."
+    risk = "These agents execute code/SQL the model writes — a hijacked agent gains execution."
+    remediation = [
+        "Avoid dataframe/python/SQL agents on untrusted input",
+        "If required, run them in a sandbox with least-privilege data access",
+        "Require human approval before generated code or SQL runs",
+    ]
+    mappings = replace(_HARNESS_MAPPINGS, mitre=["T1059"])
+
+    def check(self, ctx: RuleContext) -> Iterable[Finding]:
+        for call in ctx.analysis.calls:
+            match = _matched_segment(ctx, call, _CODE_EXEC_AGENTS)
+            if match:
+                yield self.make_finding(
+                    ctx,
+                    call,
+                    evidence=f"{match} builds an agent/chain that executes model-generated code",
+                    pattern=f"{self.id}:{match}",
+                )
+
+
+class UnrestrictedRequestToolRule(Rule):
+    """AG029 — Unrestricted HTTP request tool exposed to the agent."""
+
+    id = "AG029"
+    name = "Unrestricted HTTP request tool"
+    default_severity = Severity.HIGH
+    description = "A prebuilt tool lets the agent make arbitrary outbound HTTP requests."
+    risk = "An unrestricted request tool is an SSRF and data-exfiltration surface for the agent."
+    remediation = [
+        "Remove the raw requests tool or restrict it to an allowlist of hosts",
+        "Block private, loopback, and metadata addresses",
+        "Prefer a purpose-built tool over a generic HTTP client",
+    ]
+    mappings = replace(_HARNESS_MAPPINGS, mitre=["T1552.005"])
+
+    def check(self, ctx: RuleContext) -> Iterable[Finding]:
+        for call in ctx.analysis.calls:
+            match = _matched_segment(ctx, call, _HTTP_REQUEST_TOOLS)
+            if match:
+                yield self.make_finding(
+                    ctx,
+                    call,
+                    evidence=f"{match} exposes unrestricted outbound HTTP to the agent",
+                    pattern=f"{self.id}:{match}",
+                )
