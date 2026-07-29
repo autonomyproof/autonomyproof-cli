@@ -1,45 +1,48 @@
 # AutonomyProof real-world benchmark
 
-**Scanner version:** 0.8.0 · **Snapshot date:** 2026-07-28 · **Reproduce:** `python benchmark/run.py`
+**Scanner version:** 0.9.0 · **Snapshot date:** 2026-07-28 · **Reproduce:** `python benchmark/run.py`
 
-This measures how the scanner behaves on **real, unmodified open-source code** — 10 public
-agent / MCP / framework repositories, shallow-cloned and scanned in full (including their
-tests, scripts, and examples). It is deliberately published warts-and-all: a static-analysis
-tool that hides its false-positive rate isn't trustworthy.
+This measures how the scanner behaves on **real, unmodified open-source code** — **25 public
+agent / MCP / framework repositories (~26,000 Python files)**, shallow-cloned and scanned in
+full (including their tests, scripts, and examples). It is deliberately published
+warts-and-all: a static-analysis tool that hides its false-positive rate isn't trustworthy.
 
 ## Corpus
 
-| Repo | Python files | Findings |
-|---|---:|---:|
-| modelcontextprotocol/python-sdk | 823 | 50 |
-| crewAIInc/crewAI | 1278 | 358 |
-| langchain-ai/langgraph | 447 | 309 |
-| openai/openai-agents-python | 840 | 183 |
-| pydantic/pydantic-ai | 599 | 81 |
-| huggingface/smolagents | 73 | 91 |
-| run-llama/llama_deploy | 108 | 52 |
-| microsoft/autogen | 546 | 129 |
-| modelcontextprotocol/servers | 14 | 13 |
-| agno-agi/agno | 4286 | 802 |
-| **Total** | **~9,000** | **2,180** |
+25 repositories, **26,053 Python files**, **6,429 findings** — full per-repo breakdown in
+`benchmark/results.json`. Repos include the MCP python-sdk + servers, crewAI, langgraph,
+openai-agents, pydantic-ai, smolagents, autogen, agno, haystack, litellm, guardrails, letta,
+livekit agents, browser-use, gpt-researcher, semantic-kernel, promptflow, langflow, dspy,
+mem0, marvin, and more. The list is trivially extensible (edit `benchmark/repos.txt`; any repo
+that fails to clone is skipped).
+
+### Version-validated CVEs found in the wild (AG026)
+The version-gated CVE check found **real vulnerable dependency pins** in popular repos — a
+zero-FP, high-signal result:
+- **letta** pins `langchain-core==0.3.75` → CVE-2025-68664 **and** CVE-2026-44843
+- **dspy** pins `langchain-core==1.0.4` → CVE-2025-68664 **and** CVE-2026-44843
+
+Both versions are provably inside the published vulnerable ranges. This is what AG026 is for:
+it only fires when the pinned version is known-vulnerable, so a hit is a fact, not a guess.
 
 ## Findings per rule (whole repo, incl. tests/scripts)
 
 | Rule | Count | Precision read (author-labeled sample) |
 |---|---:|---|
-| AG002 dynamic code (eval/exec) | 35 | **High** — real `eval`/`exec` calls |
-| AG018 missing timeout | 292 | **High** — factual (no `timeout=`) |
-| AG021 insecure deserialization | 12 | **High** — real `pickle.loads` / `yaml.load` |
-| AG022 disabled TLS verify | 8 | **High** — real `verify=False` |
-| AG023 template injection | 2 | **High** *(after fix; was 33)* |
-| AG007 dangerous-op-without-approval | 27 | **High** *(after fix; was 2,443)* — real tools: `execute_code`, `send_email`, `refund_order`, `delete_file` |
-| AG024 dangerous framework flag | 5 | **High** — all literal `trust_remote_code=True` |
-| AG025 interpreter tool exposed | 105 | **High** — real `ShellTool` / `ComputerTool` / `CodeInterpreterTool` (approval-gated ones suppressed) |
-| AG026 known-vulnerable dependency | 0 | **N/A** — version-gated; fires only when a pinned dep is provably in a CVE range (none here) |
-| AG005 unrestricted HTTP | 150 | **Medium** — dynamic URLs are TP; config/`self.x` URLs are FP |
-| AG012 model-controlled SQL | 332 | **Medium** *(after fix; was 569)* — f-string/var queries TP |
-| AG003 filesystem | 597 | **Low–Medium** — flags build scripts, tests, config loads |
-| AG019 destructive command | 192 | **Low** — matches ordinary `DELETE FROM` / `DROP` SQL |
+| AG002 dynamic code (eval/exec) | 94 | **High** — real `eval`/`exec` calls |
+| AG021 insecure deserialization | 37 | **High** — real `pickle.loads` / `yaml.load` |
+| AG022 disabled TLS verify | 22 | **High** — real `verify=False` |
+| AG023 template injection | 88 | **High** — real jinja Template/render_template_string |
+| AG007 dangerous-op-without-approval | 46 | **High** — real tools with no approval |
+| AG024 dangerous framework flag | 8 | **High** — literal `trust_remote_code=True` |
+| AG025 interpreter tool exposed | 115 | **High** — real `ShellTool` / `ComputerTool` (approval-gated suppressed) |
+| AG026 known-vulnerable dependency | 4 | **High** — real vulnerable `langchain-core` pins (letta, dspy) |
+| AG027 sandbox disabled | 0 | **N/A** — no `use_docker=False` in these repos |
+| AG018 missing timeout | 1067 | **High** — factual (no `timeout=`) |
+| AG005 unrestricted HTTP | 752 | **Medium** — dynamic URLs are TP; config/`self.x` URLs are FP |
+| AG012 model-controlled SQL | 786 | **Medium** — f-string/var queries TP |
+| AG003 filesystem | 2035 | **Low–Medium** — flags build scripts, tests, config loads |
+| AG019 destructive command | 300 | **Low** — matches ordinary `DELETE FROM` / `DROP` SQL |
 
 ### Precision sampling method
 Author-adjudicated, ~5–8 findings per rule read against their actual source line. This is a

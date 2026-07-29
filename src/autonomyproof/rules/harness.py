@@ -54,6 +54,10 @@ def _has_approval(call: ast.Call) -> bool:
     )
 
 
+def _is_false_literal(node: ast.expr | None) -> bool:
+    return isinstance(node, ast.Constant) and node.value is False
+
+
 _HARNESS_MAPPINGS = Mappings(
     owaspAgentic=["Tool misuse", "Excessive agency"],
     nistAiRmf=["Govern", "Measure", "Manage"],
@@ -185,3 +189,43 @@ class KnownVulnerableDependencyRule(Rule):
             )
             finding.mappings = replace(_HARNESS_MAPPINGS, mitre=match.mitre, cve=[match.cve])
             yield finding
+
+
+class SandboxDisabledRule(Rule):
+    """AG027 — Code-execution sandbox disabled (use_docker=False)."""
+
+    id = "AG027"
+    name = "Code-execution sandbox disabled"
+    default_severity = Severity.CRITICAL
+    description = "An agent code executor is configured to run on the host (use_docker=False)."
+    risk = "Without container isolation, model-generated code runs against your host and secrets."
+    remediation = [
+        "Set use_docker=True (or omit it) so code runs in a container",
+        "Use a sandboxed executor with no host or credential access",
+        "Never execute LLM-generated code directly on the host",
+    ]
+    mappings = replace(_HARNESS_MAPPINGS, mitre=["T1059"])
+
+    def check(self, ctx: RuleContext) -> Iterable[Finding]:
+        for call in ctx.analysis.calls:
+            for kw in call.keywords:
+                if kw.arg == "use_docker" and _is_false_literal(kw.value):
+                    yield self.make_finding(
+                        ctx, call, evidence="use_docker=False runs agent code on the host"
+                    )
+        for node in ast.walk(ctx.analysis.tree):
+            if isinstance(node, ast.Dict) and self._dict_disables_docker(node):
+                yield self.make_finding(
+                    ctx, node, evidence="use_docker: False runs agent code on the host"
+                )
+
+    @staticmethod
+    def _dict_disables_docker(node: ast.Dict) -> bool:
+        for key, value in zip(node.keys, node.values, strict=False):
+            if (
+                isinstance(key, ast.Constant)
+                and key.value == "use_docker"
+                and _is_false_literal(value)
+            ):
+                return True
+        return False

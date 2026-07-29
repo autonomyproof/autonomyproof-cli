@@ -10,6 +10,7 @@ from autonomyproof.rules.harness import (
     DangerousFrameworkFlagRule,
     InterpreterToolExposedRule,
     KnownVulnerableDependencyRule,
+    SandboxDisabledRule,
 )
 from helpers import run_rule
 
@@ -144,3 +145,31 @@ def test_ag026_patched_version_clean() -> None:
 
 def test_ag026_no_dependency_clean() -> None:
     assert list(KnownVulnerableDependencyRule().check_project(_pctx({}))) == []
+
+
+def test_ag026_langflow_rce_flagged() -> None:
+    findings = list(KnownVulnerableDependencyRule().check_project(_pctx({"langflow": "1.2.0"})))
+    assert findings and "CVE-2025-3248" in {c for f in findings for c in f.mappings.cve}
+
+
+# --- AG027 sandbox disabled ---------------------------------------------------
+def test_ag027_use_docker_false_kwarg() -> None:
+    assert run_rule(SandboxDisabledRule(), "LocalExecutor(use_docker=False)\n")
+
+
+def test_ag027_use_docker_false_in_dict() -> None:
+    code = "agent = UserProxyAgent(code_execution_config={'use_docker': False})\n"
+    findings = run_rule(SandboxDisabledRule(), code)
+    assert findings and findings[0].ruleId == "AG027"
+
+
+def test_ag027_use_docker_true_clean() -> None:
+    assert run_rule(SandboxDisabledRule(), "LocalExecutor(use_docker=True)\n") == []
+
+
+def test_ag027_dict_true_value_clean() -> None:
+    assert run_rule(SandboxDisabledRule(), "cfg = {'use_docker': True}\n") == []
+
+
+def test_ag027_dict_without_use_docker_clean() -> None:
+    assert run_rule(SandboxDisabledRule(), "cfg = {'work_dir': 'coding'}\n") == []
