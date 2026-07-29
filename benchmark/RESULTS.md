@@ -35,6 +35,7 @@ tool that hides its false-positive rate isn't trustworthy.
 | AG007 dangerous-op-without-approval | 27 | **High** *(after fix; was 2,443)* — real tools: `execute_code`, `send_email`, `refund_order`, `delete_file` |
 | AG024 dangerous framework flag | 5 | **High** — all literal `trust_remote_code=True` |
 | AG025 interpreter tool exposed | 105 | **High** — real `ShellTool` / `ComputerTool` / `CodeInterpreterTool` (approval-gated ones suppressed) |
+| AG026 known-vulnerable dependency | 0 | **N/A** — version-gated; fires only when a pinned dep is provably in a CVE range (none here) |
 | AG005 unrestricted HTTP | 150 | **Medium** — dynamic URLs are TP; config/`self.x` URLs are FP |
 | AG012 model-controlled SQL | 332 | **Medium** *(after fix; was 569)* — f-string/var queries TP |
 | AG003 filesystem | 597 | **Low–Medium** — flags build scripts, tests, config loads |

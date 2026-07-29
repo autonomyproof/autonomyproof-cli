@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import ast
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from autonomyproof.astutils import FileAnalysis
 from autonomyproof.config import Config
@@ -64,6 +64,7 @@ class ProjectContext:
     analyses: list[FileAnalysis]
     config: Config
     frameworks: list[str]
+    dependency_versions: dict[str, str] = field(default_factory=dict)
 
     @property
     def framework(self) -> str | None:

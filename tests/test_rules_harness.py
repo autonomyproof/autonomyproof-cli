@@ -2,9 +2,23 @@
 
 from __future__ import annotations
 
+from autonomyproof.astutils import FileAnalysis
+from autonomyproof.config import Config
 from autonomyproof.models import Severity
-from autonomyproof.rules.harness import DangerousFrameworkFlagRule, InterpreterToolExposedRule
+from autonomyproof.rules.base import ProjectContext
+from autonomyproof.rules.harness import (
+    DangerousFrameworkFlagRule,
+    InterpreterToolExposedRule,
+    KnownVulnerableDependencyRule,
+)
 from helpers import run_rule
+
+
+def _pctx(versions: dict[str, str]) -> ProjectContext:
+    analysis = FileAnalysis.build("agent.py", "x = 1\n")
+    return ProjectContext(
+        analyses=[analysis], config=Config(), frameworks=[], dependency_versions=versions
+    )
 
 
 # --- AG024 dangerous framework flags ------------------------------------------
@@ -14,7 +28,8 @@ def test_ag024_allow_dangerous_deserialization_critical() -> None:
     assert findings[0].ruleId == "AG024"
     assert findings[0].severity is Severity.CRITICAL
     assert "AML.T0010" in findings[0].mappings.mitre
-    assert "CVE-2025-68664" in findings[0].mappings.cve
+    # No static CVE on the pattern rule — CVEs are version-validated by AG026.
+    assert findings[0].mappings.cve == []
 
 
 def test_ag024_allow_dangerous_code_critical() -> None:
@@ -100,3 +115,32 @@ def test_ag025_interpreter_with_approval_clean() -> None:
     # A shell tool gated behind human approval is the recommended pattern, not a finding.
     code = "ShellTool(executor=run, needs_approval=True)\n"
     assert run_rule(InterpreterToolExposedRule(), code) == []
+
+
+# --- AG026 version-validated CVE ----------------------------------------------
+def test_ag026_vulnerable_version_flagged_with_cve() -> None:
+    findings = list(
+        KnownVulnerableDependencyRule().check_project(_pctx({"langchain-core": "0.3.80"}))
+    )
+    cves = {c for f in findings for c in f.mappings.cve}
+    assert "CVE-2025-68664" in cves
+    assert "CVE-2026-44843" in cves
+    assert all(f.ruleId == "AG026" for f in findings)
+
+
+def test_ag026_vulnerable_1x_version_flagged() -> None:
+    findings = list(
+        KnownVulnerableDependencyRule().check_project(_pctx({"langchain_core": "1.2.4"}))
+    )
+    assert findings and "CVE-2025-68664" in {c for f in findings for c in f.mappings.cve}
+
+
+def test_ag026_patched_version_clean() -> None:
+    assert (
+        list(KnownVulnerableDependencyRule().check_project(_pctx({"langchain-core": "0.3.85"})))
+        == []
+    )
+
+
+def test_ag026_no_dependency_clean() -> None:
+    assert list(KnownVulnerableDependencyRule().check_project(_pctx({}))) == []

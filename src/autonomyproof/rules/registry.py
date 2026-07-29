@@ -24,6 +24,7 @@ from autonomyproof.rules.filesystem import CredentialPathAccessRule, FilesystemA
 from autonomyproof.rules.harness import (
     DangerousFrameworkFlagRule,
     InterpreterToolExposedRule,
+    KnownVulnerableDependencyRule,
 )
 from autonomyproof.rules.insecure import (
     DisabledCertVerificationRule,
@@ -68,6 +69,7 @@ _RULE_CLASSES: list[type[Rule]] = [
     TemplateInjectionRule,  # AG023
     DangerousFrameworkFlagRule,  # AG024
     InterpreterToolExposedRule,  # AG025
+    KnownVulnerableDependencyRule,  # AG026
 ]
 
 

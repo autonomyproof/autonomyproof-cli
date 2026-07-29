@@ -11,8 +11,9 @@ from collections.abc import Iterable
 from dataclasses import replace
 
 from autonomyproof.astutils import is_true_literal
+from autonomyproof.cve import known_vulnerabilities
 from autonomyproof.models import Finding, Mappings, Severity
-from autonomyproof.rules.base import Rule, RuleContext
+from autonomyproof.rules.base import ProjectContext, Rule, RuleContext
 
 # Explicit opt-in flags that enable code execution, unsafe deserialization, or secret leaks.
 # Each maps to the severity of the capability it unlocks.
@@ -73,12 +74,9 @@ class DangerousFrameworkFlagRule(Rule):
         "Use safe loaders and a bound deserialization allowlist",
         "Never enable trust_remote_code or allow_dangerous_* on untrusted input",
     ]
-    # ATLAS supply-chain / user-execution + the LangChain serialization CVEs.
-    mappings = replace(
-        _HARNESS_MAPPINGS,
-        mitre=["AML.T0010", "AML.T0011"],
-        cve=["CVE-2025-68664", "CVE-2026-44843"],
-    )
+    # ATLAS supply-chain / user-execution. No CVE here: this rule detects the *pattern*,
+    # not a version-specific vulnerability. Version-validated CVEs are AG026's job.
+    mappings = replace(_HARNESS_MAPPINGS, mitre=["AML.T0010", "AML.T0011"])
 
     def check(self, ctx: RuleContext) -> Iterable[Finding]:
         for call in ctx.analysis.calls:
@@ -159,3 +157,31 @@ class InterpreterToolExposedRule(Rule):
             and el.value in _DANGEROUS_LOAD_TOOLS
         }
         return sorted(found)
+
+
+class KnownVulnerableDependencyRule(Rule):
+    """AG026 — Known-vulnerable agent-framework dependency (version-validated)."""
+
+    id = "AG026"
+    name = "Known-vulnerable agent-framework dependency"
+    default_severity = Severity.CRITICAL
+    description = "A pinned dependency version falls in the vulnerable range of a known CVE."
+    risk = "Running a version with a published CVE exposes the agent to a known exploit."
+    remediation = [
+        "Upgrade the dependency to a fixed version",
+        "Pin only patched releases in requirements/lockfiles",
+        "Track security advisories for your agent frameworks",
+    ]
+    mappings = _HARNESS_MAPPINGS
+    project_level = True
+
+    def check_project(self, pctx: ProjectContext) -> Iterable[Finding]:
+        for match in known_vulnerabilities(pctx.dependency_versions):
+            evidence = f"{match.package}=={match.version} — {match.cve}: {match.summary}"
+            finding = self.make_project_finding(
+                pctx,
+                evidence=evidence,
+                pattern=f"{self.id}:{match.cve}",
+            )
+            finding.mappings = replace(_HARNESS_MAPPINGS, mitre=match.mitre, cve=[match.cve])
+            yield finding

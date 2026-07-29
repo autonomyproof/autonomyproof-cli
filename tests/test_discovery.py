@@ -6,10 +6,47 @@ from pathlib import Path
 
 from autonomyproof.discovery import (
     dependency_names,
+    dependency_versions,
     discover_files,
     read_ignore_patterns,
     read_repo_metadata,
 )
+
+
+def test_dependency_versions_pinned_requirements(tmp_path: Path) -> None:
+    (tmp_path / "requirements.txt").write_text(
+        "langchain-core==0.3.80\nrequests>=2\n# comment\nflask\n", encoding="utf-8"
+    )
+    assert dependency_versions(tmp_path) == {"langchain-core": "0.3.80"}
+
+
+def test_dependency_versions_from_lockfile(tmp_path: Path) -> None:
+    (tmp_path / "poetry.lock").write_text(
+        '[[package]]\nname = "langchain-core"\nversion = "1.2.4"\n', encoding="utf-8"
+    )
+    assert dependency_versions(tmp_path)["langchain-core"] == "1.2.4"
+
+
+def test_dependency_versions_ignores_ranges(tmp_path: Path) -> None:
+    (tmp_path / "requirements.txt").write_text("langchain-core>=0.3,<0.4\n", encoding="utf-8")
+    assert dependency_versions(tmp_path) == {}
+
+
+def test_dependency_versions_bad_lockfile(tmp_path: Path) -> None:
+    (tmp_path / "uv.lock").write_text("not valid toml [[[\n", encoding="utf-8")
+    assert dependency_versions(tmp_path) == {}
+
+
+def test_dependency_versions_lockfile_package_not_list(tmp_path: Path) -> None:
+    (tmp_path / "uv.lock").write_text('[package]\nname = "x"\n', encoding="utf-8")
+    assert dependency_versions(tmp_path) == {}
+
+
+def test_dependency_versions_lockfile_non_dict_and_incomplete(tmp_path: Path) -> None:
+    (tmp_path / "poetry.lock").write_text('package = ["notdict"]\n', encoding="utf-8")
+    assert dependency_versions(tmp_path) == {}
+    (tmp_path / "poetry.lock").write_text('[[package]]\nname = "x"\n', encoding="utf-8")
+    assert dependency_versions(tmp_path) == {}
 
 
 def _rel(root: Path, paths: list[Path]) -> set[str]:

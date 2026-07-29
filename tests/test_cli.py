@@ -63,17 +63,16 @@ def test_rules_explain_unknown(runner: CliRunner) -> None:
     assert "Unknown rule" in result.output
 
 
-def test_rules_explain_shows_mitre_and_cve(runner: CliRunner) -> None:
+def test_rules_explain_shows_mitre(runner: CliRunner) -> None:
     result = runner.invoke(cli.main, ["rules", "explain", "AG024"])
     assert "MITRE:" in result.output
-    assert "CVE-2025-68664" in result.output
+    assert "AML.T0010" in result.output
 
 
-def test_rules_explain_without_mitre_or_cve(runner: CliRunner) -> None:
-    # AG020 has no MITRE/CVE mapping, so those lines are omitted.
+def test_rules_explain_without_mitre(runner: CliRunner) -> None:
+    # AG020 has no MITRE mapping, so that line is omitted.
     result = runner.invoke(cli.main, ["rules", "explain", "AG020"])
     assert "MITRE:" not in result.output
-    assert "CVE:" not in result.output
 
 
 def test_config_validate_ok(runner: CliRunner) -> None:
