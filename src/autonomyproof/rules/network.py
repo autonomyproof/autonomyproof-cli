@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import ipaddress
 from collections.abc import Iterable
+from dataclasses import replace
 from urllib.parse import urlsplit
 
 from autonomyproof.astutils import is_model_controlled, keyword
@@ -179,7 +180,7 @@ class SsrfRule(Rule):
         "Deny cloud metadata endpoints (169.254.169.254)",
         "Resolve and validate the host before connecting",
     ]
-    mappings = _NET_MAPPINGS
+    mappings = replace(_NET_MAPPINGS, mitre=["T1552.005"])  # Cloud Instance Metadata API
 
     def check(self, ctx: RuleContext) -> Iterable[Finding]:
         for call in ctx.analysis.calls:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 from collections.abc import Iterable
+from dataclasses import replace
 
 from autonomyproof.astutils import is_model_controlled, keyword
 from autonomyproof.models import Finding, Mappings, Severity
@@ -127,7 +128,7 @@ class CredentialPathAccessRule(Rule):
         "Confine file access to a dedicated working directory",
         "Load secrets from a managed secret store, not the filesystem",
     ]
-    mappings = _FS_MAPPINGS
+    mappings = replace(_FS_MAPPINGS, mitre=["T1552"])  # Unsecured Credentials
 
     def check(self, ctx: RuleContext) -> Iterable[Finding]:
         for call in ctx.analysis.calls:

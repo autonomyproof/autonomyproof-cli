@@ -117,6 +117,44 @@ def dependency_names(root: Path) -> list[str]:
     return sorted(names)
 
 
+_PINNED_REQ = re.compile(r"^([A-Za-z0-9._-]+)\s*==\s*([0-9][^\s;#,]*)")
+
+
+def dependency_versions(root: Path) -> dict[str, str]:
+    """Return exact pinned dependency versions from requirements and lockfiles.
+
+    Only versions we can pin precisely are returned (``==`` in requirements.txt, or a
+    resolved version in poetry.lock / uv.lock). Ranges are deliberately ignored — a CVE
+    claim is only made when the installed version is provably known.
+    """
+    versions: dict[str, str] = {}
+
+    requirements = root / "requirements.txt"
+    if requirements.exists():
+        for line in requirements.read_text(encoding="utf-8").splitlines():
+            match = _PINNED_REQ.match(line.strip())
+            if match:
+                versions.setdefault(match.group(1).lower(), match.group(2))
+
+    for lockfile in ("poetry.lock", "uv.lock"):
+        path = root / lockfile
+        if not path.exists():
+            continue
+        try:
+            data = tomllib.loads(path.read_text(encoding="utf-8"))
+        except tomllib.TOMLDecodeError:
+            continue
+        packages = data.get("package")
+        if isinstance(packages, list):
+            for pkg in packages:
+                if isinstance(pkg, dict):
+                    name, version = pkg.get("name"), pkg.get("version")
+                    if isinstance(name, str) and isinstance(version, str):
+                        versions.setdefault(name.lower(), version)
+
+    return versions
+
+
 def _names_from_toml(data: dict[str, object]) -> set[str]:
     names: set[str] = set()
     project = data.get("project")

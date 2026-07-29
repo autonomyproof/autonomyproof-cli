@@ -1,7 +1,7 @@
 {
   "repo_count": 10,
-  "total_files": 9014,
-  "total_findings": 2068,
+  "total_files": 9015,
+  "total_findings": 2180,
   "by_rule": {
     "AG001": 3,
     "AG002": 35,
@@ -10,7 +10,7 @@
     "AG005": 150,
     "AG006": 9,
     "AG007": 27,
-    "AG009": 131,
+    "AG009": 133,
     "AG011": 47,
     "AG012": 332,
     "AG013": 83,
@@ -23,7 +23,9 @@
     "AG020": 10,
     "AG021": 12,
     "AG022": 8,
-    "AG023": 2
+    "AG023": 2,
+    "AG024": 5,
+    "AG025": 105
   },
   "per_repo": [
     {
@@ -89,14 +91,14 @@
     {
       "repo": "openai-agents",
       "status": "ok",
-      "files_scanned": 840,
-      "findings": 183,
+      "files_scanned": 841,
+      "findings": 290,
       "by_rule": {
         "AG002": 6,
         "AG003": 28,
         "AG005": 9,
         "AG007": 2,
-        "AG009": 32,
+        "AG009": 34,
         "AG012": 9,
         "AG013": 8,
         "AG015": 6,
@@ -105,7 +107,8 @@
         "AG018": 30,
         "AG019": 36,
         "AG020": 1,
-        "AG022": 6
+        "AG022": 6,
+        "AG025": 105
       }
     },
     {
@@ -132,7 +135,7 @@
       "repo": "smolagents",
       "status": "ok",
       "files_scanned": 73,
-      "findings": 91,
+      "findings": 96,
       "by_rule": {
         "AG002": 6,
         "AG003": 28,
@@ -144,7 +147,8 @@
         "AG018": 27,
         "AG020": 1,
         "AG021": 3,
-        "AG023": 2
+        "AG023": 2,
+        "AG024": 5
       }
     },
     {

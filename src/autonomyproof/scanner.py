@@ -11,6 +11,7 @@ from autonomyproof.astutils import FileAnalysis
 from autonomyproof.config import Config
 from autonomyproof.discovery import (
     dependency_names,
+    dependency_versions,
     discover_files,
     read_ignore_patterns,
     read_repo_metadata,
@@ -66,7 +67,8 @@ class Scanner:
                 errors.append(ScanError(file=rel, message=str(exc)))
 
         frameworks = detect_frameworks(analyses, dependency_names(root))
-        findings = self._run_rules(analyses, frameworks)
+        versions = dependency_versions(root)
+        findings = self._run_rules(analyses, frameworks, versions)
         findings = self._apply_policy(findings)
         findings.sort(key=lambda f: (-f.severity.rank, f.ruleId, f.file, f.line))
 
@@ -90,7 +92,12 @@ class Scanner:
             errors=errors,
         )
 
-    def _run_rules(self, analyses: list[FileAnalysis], frameworks: list[str]) -> list[Finding]:
+    def _run_rules(
+        self,
+        analyses: list[FileAnalysis],
+        frameworks: list[str],
+        dependency_versions: dict[str, str],
+    ) -> list[Finding]:
         findings: list[Finding] = []
         for analysis in analyses:
             ctx = RuleContext(
@@ -103,7 +110,12 @@ class Scanner:
                 if not rule.project_level:
                     findings.extend(rule.check(ctx))
 
-        pctx = ProjectContext(analyses=analyses, config=self.config, frameworks=frameworks)
+        pctx = ProjectContext(
+            analyses=analyses,
+            config=self.config,
+            frameworks=frameworks,
+            dependency_versions=dependency_versions,
+        )
         for rule in self.rules:
             if rule.project_level:
                 findings.extend(rule.check_project(pctx))

@@ -33,7 +33,7 @@ def _home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
 def test_version(runner: CliRunner) -> None:
     result = runner.invoke(cli.main, ["--version"])
     assert result.exit_code == 0
-    assert "0.7.0" in result.output
+    assert "0.8.0" in result.output
 
 
 def test_init_creates_and_is_idempotent(runner: CliRunner) -> None:
@@ -61,6 +61,18 @@ def test_rules_explain_unknown(runner: CliRunner) -> None:
     result = runner.invoke(cli.main, ["rules", "explain", "AG999"])
     assert result.exit_code != 0
     assert "Unknown rule" in result.output
+
+
+def test_rules_explain_shows_mitre(runner: CliRunner) -> None:
+    result = runner.invoke(cli.main, ["rules", "explain", "AG024"])
+    assert "MITRE:" in result.output
+    assert "AML.T0010" in result.output
+
+
+def test_rules_explain_without_mitre(runner: CliRunner) -> None:
+    # AG020 has no MITRE mapping, so that line is omitted.
+    result = runner.invoke(cli.main, ["rules", "explain", "AG020"])
+    assert "MITRE:" not in result.output
 
 
 def test_config_validate_ok(runner: CliRunner) -> None:

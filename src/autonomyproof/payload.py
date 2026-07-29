@@ -47,6 +47,8 @@ def build_scan_payload(result: ScanResult) -> dict[str, object]:
                     "owaspAgentic": f.mappings.owaspAgentic,
                     "nistAiRmf": f.mappings.nistAiRmf,
                     "iso42001Alignment": f.mappings.iso42001Alignment,
+                    "mitre": f.mappings.mitre,
+                    "cve": f.mappings.cve,
                 },
             }
             for f in result.findings

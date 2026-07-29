@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 from collections.abc import Iterable
+from dataclasses import replace
 
 from autonomyproof.astutils import is_model_controlled, keyword
 from autonomyproof.models import Finding, Mappings, Severity
@@ -56,7 +57,8 @@ class InsecureDeserializationRule(Rule):
         "Use yaml.safe_load / json for data interchange",
         "Deserialize only formats that cannot execute code",
     ]
-    mappings = _INSECURE_MAPPINGS
+    # ATLAS: User Execution (Unsafe ML Artifacts) + AI Supply Chain Compromise.
+    mappings = replace(_INSECURE_MAPPINGS, mitre=["AML.T0011", "AML.T0010"])
 
     def check(self, ctx: RuleContext) -> Iterable[Finding]:
         for call in ctx.analysis.calls:

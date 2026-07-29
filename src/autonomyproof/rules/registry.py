@@ -21,6 +21,11 @@ from autonomyproof.rules.execution import (
     ShellExecutionRule,
 )
 from autonomyproof.rules.filesystem import CredentialPathAccessRule, FilesystemAccessRule
+from autonomyproof.rules.harness import (
+    DangerousFrameworkFlagRule,
+    InterpreterToolExposedRule,
+    KnownVulnerableDependencyRule,
+)
 from autonomyproof.rules.insecure import (
     DisabledCertVerificationRule,
     InsecureDeserializationRule,
@@ -62,6 +67,9 @@ _RULE_CLASSES: list[type[Rule]] = [
     InsecureDeserializationRule,  # AG021
     DisabledCertVerificationRule,  # AG022
     TemplateInjectionRule,  # AG023
+    DangerousFrameworkFlagRule,  # AG024
+    InterpreterToolExposedRule,  # AG025
+    KnownVulnerableDependencyRule,  # AG026
 ]
 
 
