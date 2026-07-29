@@ -141,3 +141,13 @@ cases:
   - {id: ag027-pos-kwarg, rule: AG027, label: positive, code: "ex = LocalCommandLineCodeExecutor(use_docker=False)\n"}
   - {id: ag027-neg-true, rule: AG027, label: negative, code: "agent = UserProxyAgent(code_execution_config={'use_docker': True})\n"}
   - {id: ag027-neg-absent, rule: AG027, label: negative, code: "cfg = {'work_dir': 'coding'}\n"}
+
+  # --- AG028 code-executing agent/chain ---
+  - {id: ag028-pos-pandas, rule: AG028, label: positive, code: "agent = create_pandas_dataframe_agent(llm, df)\n"}
+  - {id: ag028-pos-sql, rule: AG028, label: positive, code: "agent = create_sql_agent(llm, db)\n"}
+  - {id: ag028-neg-react, rule: AG028, label: negative, code: "agent = create_react_agent(llm, tools)\n"}
+
+  # --- AG029 unrestricted HTTP request tool ---
+  - {id: ag029-pos-get, rule: AG029, label: positive, code: "tool = RequestsGetTool()\n"}
+  - {id: ag029-neg-safe, rule: AG029, label: negative, code: "tool = CalculatorTool()\n"}
+

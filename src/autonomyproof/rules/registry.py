@@ -22,10 +22,12 @@ from autonomyproof.rules.execution import (
 )
 from autonomyproof.rules.filesystem import CredentialPathAccessRule, FilesystemAccessRule
 from autonomyproof.rules.harness import (
+    CodeExecutingAgentRule,
     DangerousFrameworkFlagRule,
     InterpreterToolExposedRule,
     KnownVulnerableDependencyRule,
     SandboxDisabledRule,
+    UnrestrictedRequestToolRule,
 )
 from autonomyproof.rules.insecure import (
     DisabledCertVerificationRule,
@@ -72,6 +74,8 @@ _RULE_CLASSES: list[type[Rule]] = [
     InterpreterToolExposedRule,  # AG025
     KnownVulnerableDependencyRule,  # AG026
     SandboxDisabledRule,  # AG027
+    CodeExecutingAgentRule,  # AG028
+    UnrestrictedRequestToolRule,  # AG029
 ]
 
 

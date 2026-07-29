@@ -1,6 +1,6 @@
 # AutonomyProof real-world benchmark
 
-**Scanner version:** 0.9.0 · **Snapshot date:** 2026-07-28 · **Reproduce:** `python benchmark/run.py`
+**Scanner version:** 0.10.0 · **Snapshot date:** 2026-07-28 · **Reproduce:** `python benchmark/run.py`
 
 This measures how the scanner behaves on **real, unmodified open-source code** — **25 public
 agent / MCP / framework repositories (~26,000 Python files)**, shallow-cloned and scanned in
@@ -38,11 +38,20 @@ it only fires when the pinned version is known-vulnerable, so a hit is a fact, n
 | AG025 interpreter tool exposed | 115 | **High** — real `ShellTool` / `ComputerTool` (approval-gated suppressed) |
 | AG026 known-vulnerable dependency | 4 | **High** — real vulnerable `langchain-core` pins (letta, dspy) |
 | AG027 sandbox disabled | 0 | **N/A** — no `use_docker=False` in these repos |
+| AG028 code-executing agent/chain | 4 | **High** — real `create_csv_agent` / `LLMMathChain` / `create_sql_agent` (langflow) |
+| AG029 unrestricted HTTP request tool | 1 | **High** — real `TextRequestsWrapper` (langflow) |
 | AG018 missing timeout | 1067 | **High** — factual (no `timeout=`) |
 | AG005 unrestricted HTTP | 752 | **Medium** — dynamic URLs are TP; config/`self.x` URLs are FP |
 | AG012 model-controlled SQL | 786 | **Medium** — f-string/var queries TP |
 | AG003 filesystem | 2035 | **Low–Medium** — flags build scripts, tests, config loads |
 | AG019 destructive command | 300 | **Low** — matches ordinary `DELETE FROM` / `DROP` SQL |
+
+### A rule the benchmark rejected (AG030)
+A proposed **AG030 (dynamic import of a model-controlled module)** was implemented, then
+**dropped** when this benchmark showed it firing **224 times** — almost all benign plugin
+loading like `importlib.import_module(f"stories.{name}")`, where the name comes from a registry
+or f-string, not model input. It could not meet the zero-false-positive bar, so it did not ship.
+The benchmark is the gate: a rule that can't stay zero-FP on real code is removed, not shipped.
 
 ### Precision sampling method
 Author-adjudicated, ~5–8 findings per rule read against their actual source line. This is a

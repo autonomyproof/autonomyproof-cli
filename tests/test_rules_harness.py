@@ -7,10 +7,12 @@ from autonomyproof.config import Config
 from autonomyproof.models import Severity
 from autonomyproof.rules.base import ProjectContext
 from autonomyproof.rules.harness import (
+    CodeExecutingAgentRule,
     DangerousFrameworkFlagRule,
     InterpreterToolExposedRule,
     KnownVulnerableDependencyRule,
     SandboxDisabledRule,
+    UnrestrictedRequestToolRule,
 )
 from helpers import run_rule
 
@@ -173,3 +175,29 @@ def test_ag027_dict_true_value_clean() -> None:
 
 def test_ag027_dict_without_use_docker_clean() -> None:
     assert run_rule(SandboxDisabledRule(), "cfg = {'work_dir': 'coding'}\n") == []
+
+
+# --- AG028 code-executing agent ------------------------------------------------
+def test_ag028_pandas_agent() -> None:
+    findings = run_rule(
+        CodeExecutingAgentRule(), "agent = create_pandas_dataframe_agent(llm, df)\n"
+    )
+    assert findings[0].ruleId == "AG028"
+
+
+def test_ag028_palchain_dotted() -> None:
+    assert run_rule(CodeExecutingAgentRule(), "chain = PALChain.from_math_prompt(llm)\n")
+
+
+def test_ag028_safe_agent_clean() -> None:
+    assert run_rule(CodeExecutingAgentRule(), "agent = create_react_agent(llm, tools)\n") == []
+
+
+# --- AG029 unrestricted request tool -------------------------------------------
+def test_ag029_requests_tool() -> None:
+    findings = run_rule(UnrestrictedRequestToolRule(), "t = RequestsGetTool()\n")
+    assert findings[0].ruleId == "AG029"
+
+
+def test_ag029_safe_tool_clean() -> None:
+    assert run_rule(UnrestrictedRequestToolRule(), "t = CalculatorTool()\n") == []
