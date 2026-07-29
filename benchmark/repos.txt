@@ -11,3 +11,19 @@ llama-deploy https://github.com/run-llama/llama_deploy
 autogen-core https://github.com/microsoft/autogen
 mcp-servers https://github.com/modelcontextprotocol/servers
 agno https://github.com/agno-agi/agno
+# Expanded set (any that fail to clone are skipped by the harness).
+haystack https://github.com/deepset-ai/haystack
+litellm https://github.com/BerriAI/litellm
+guardrails https://github.com/guardrails-ai/guardrails
+letta https://github.com/letta-ai/letta
+livekit-agents https://github.com/livekit/agents
+browser-use https://github.com/browser-use/browser-use
+gpt-researcher https://github.com/assafelovic/gpt-researcher
+semantic-kernel https://github.com/microsoft/semantic-kernel
+promptflow https://github.com/microsoft/promptflow
+langflow https://github.com/langflow-ai/langflow
+superagent https://github.com/superagent-ai/superagent
+dspy https://github.com/stanfordnlp/dspy
+phidata https://github.com/agno-agi/phidata
+mem0 https://github.com/mem0ai/mem0
+marvin https://github.com/PrefectHQ/marvin

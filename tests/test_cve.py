@@ -31,3 +31,11 @@ def test_absent_package_is_clean() -> None:
 
 def test_unparseable_version_is_skipped() -> None:
     assert known_vulnerabilities({"langchain-core": "not-a-version"}) == []
+
+
+def test_matches_langflow_rce() -> None:
+    assert {m.cve for m in known_vulnerabilities({"langflow": "1.2.0"})} == {"CVE-2025-3248"}
+
+
+def test_langflow_patched_is_clean() -> None:
+    assert known_vulnerabilities({"langflow": "1.3.0"}) == []

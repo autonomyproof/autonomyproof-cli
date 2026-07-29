@@ -51,6 +51,13 @@ _CVE_DB: tuple[CveRecord, ...] = (
         summary="LangChain unsafe deserialization via overly broad load() allowlists",
         mitre=("AML.T0010",),
     ),
+    CveRecord(
+        cve="CVE-2025-3248",
+        package="langflow",
+        ranges=("<1.3.0",),
+        summary="Langflow unauthenticated RCE via /api/v1/validate/code (exec of user code)",
+        mitre=("T1190",),  # Exploit Public-Facing Application
+    ),
 )
 
 

@@ -25,6 +25,7 @@ from autonomyproof.rules.harness import (
     DangerousFrameworkFlagRule,
     InterpreterToolExposedRule,
     KnownVulnerableDependencyRule,
+    SandboxDisabledRule,
 )
 from autonomyproof.rules.insecure import (
     DisabledCertVerificationRule,
@@ -70,6 +71,7 @@ _RULE_CLASSES: list[type[Rule]] = [
     DangerousFrameworkFlagRule,  # AG024
     InterpreterToolExposedRule,  # AG025
     KnownVulnerableDependencyRule,  # AG026
+    SandboxDisabledRule,  # AG027
 ]
 
 
