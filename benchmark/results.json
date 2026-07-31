@@ -1,7 +1,7 @@
 {
   "repo_count": 25,
   "total_files": 26117,
-  "total_findings": 6447,
+  "total_findings": 6451,
   "by_rule": {
     "AG001": 20,
     "AG002": 93,
@@ -28,7 +28,8 @@
     "AG025": 115,
     "AG026": 4,
     "AG028": 4,
-    "AG029": 1
+    "AG029": 1,
+    "AG031": 4
   },
   "per_repo": [
     {
@@ -159,21 +160,22 @@
       "repo": "llama-deploy",
       "status": "ok",
       "files_scanned": 108,
-      "findings": 52,
+      "findings": 53,
       "by_rule": {
         "AG003": 30,
         "AG005": 3,
         "AG006": 5,
         "AG018": 11,
         "AG020": 1,
-        "AG022": 2
+        "AG022": 2,
+        "AG031": 1
       }
     },
     {
       "repo": "autogen-core",
       "status": "ok",
       "files_scanned": 546,
-      "findings": 129,
+      "findings": 131,
       "by_rule": {
         "AG002": 3,
         "AG003": 86,
@@ -184,7 +186,8 @@
         "AG018": 16,
         "AG019": 4,
         "AG020": 1,
-        "AG021": 2
+        "AG021": 2,
+        "AG031": 2
       }
     },
     {
@@ -247,7 +250,7 @@
       "repo": "litellm",
       "status": "ok",
       "files_scanned": 5084,
-      "findings": 878,
+      "findings": 879,
       "by_rule": {
         "AG001": 2,
         "AG002": 3,
@@ -264,7 +267,8 @@
         "AG019": 18,
         "AG020": 1,
         "AG022": 2,
-        "AG023": 2
+        "AG023": 2,
+        "AG031": 1
       }
     },
     {

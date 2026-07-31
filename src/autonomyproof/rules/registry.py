@@ -23,7 +23,9 @@ from autonomyproof.rules.execution import (
 from autonomyproof.rules.filesystem import CredentialPathAccessRule, FilesystemAccessRule
 from autonomyproof.rules.harness import (
     CodeExecutingAgentRule,
+    CorsWildcardCredentialsRule,
     DangerousFrameworkFlagRule,
+    DisabledSafetyFilterRule,
     InterpreterToolExposedRule,
     KnownVulnerableDependencyRule,
     PublicShareRule,
@@ -78,6 +80,8 @@ _RULE_CLASSES: list[type[Rule]] = [
     CodeExecutingAgentRule,  # AG028
     UnrestrictedRequestToolRule,  # AG029
     PublicShareRule,  # AG030
+    CorsWildcardCredentialsRule,  # AG031
+    DisabledSafetyFilterRule,  # AG032
 ]
 
 
