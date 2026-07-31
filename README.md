@@ -25,6 +25,8 @@ source code never leaves your machine. ([Why this exists →](https://autonomypr
 [![CI](https://github.com/autonomyproof/autonomyproof-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/autonomyproof/autonomyproof-cli/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](#testing)
+[![Benchmark](https://img.shields.io/badge/benchmark-25%20repos%20%C2%B7%20zero--FP-blue.svg)](benchmark/RESULTS.md)
+[![PyPI](https://img.shields.io/pypi/v/autonomyproof.svg)](https://pypi.org/project/autonomyproof/)
 
 ## Install
 
@@ -83,6 +85,13 @@ publish the per-rule counts, an author-labeled precision read, and the known-noi
 benchmark drives the accuracy backlog: it's what caught (and let us fix) the AG007, AG023, and
 AG012 false-positive classes — cutting total findings on the corpus by more than half while
 keeping the true positives.
+
+### Static vs runtime
+
+AutonomyProof is **static**: it analyzes your agent's source before deployment and proves what
+authority it holds. It is **not** a runtime monitor and does not watch a live agent for prompt
+injection — that's a complementary, different layer. Use both: static authority containment
+here, runtime behavioral monitoring elsewhere.
 
 ## Privacy
 
