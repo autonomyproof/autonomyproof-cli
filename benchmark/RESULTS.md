@@ -1,6 +1,6 @@
 # AutonomyProof real-world benchmark
 
-**Scanner version:** 0.10.0 · **Snapshot date:** 2026-07-28 · **Reproduce:** `python benchmark/run.py`
+**Scanner version:** 0.12.0 · **Snapshot date:** 2026-07-28 · **Reproduce:** `python benchmark/run.py`
 
 This measures how the scanner behaves on **real, unmodified open-source code** — **25 public
 agent / MCP / framework repositories (~26,000 Python files)**, shallow-cloned and scanned in
@@ -9,7 +9,7 @@ warts-and-all: a static-analysis tool that hides its false-positive rate isn't t
 
 ## Corpus
 
-25 repositories, **26,053 Python files**, **6,429 findings** — full per-repo breakdown in
+25 repositories, **26,117 Python files**, **6,451 findings** — full per-repo breakdown in
 `benchmark/results.json`. Repos include the MCP python-sdk + servers, crewAI, langgraph,
 openai-agents, pydantic-ai, smolagents, autogen, agno, haystack, litellm, guardrails, letta,
 livekit agents, browser-use, gpt-researcher, semantic-kernel, promptflow, langflow, dspy,
@@ -40,6 +40,9 @@ it only fires when the pinned version is known-vulnerable, so a hit is a fact, n
 | AG027 sandbox disabled | 0 | **N/A** — no `use_docker=False` in these repos |
 | AG028 code-executing agent/chain | 4 | **High** — real `create_csv_agent` / `LLMMathChain` / `create_sql_agent` (langflow) |
 | AG029 unrestricted HTTP request tool | 1 | **High** — real `TextRequestsWrapper` (langflow) |
+| AG030 public share tunnel | 0 | **N/A** — no `.launch(share=True)` in these repos |
+| AG031 CORS wildcard + credentials | 4 | **High** — real FastAPI misconfigs (autogen-core, litellm, llama-deploy) |
+| AG032 disabled safety filter | 0 | **N/A** — no `BLOCK_NONE` in these repos |
 | AG018 missing timeout | 1067 | **High** — factual (no `timeout=`) |
 | AG005 unrestricted HTTP | 752 | **Medium** — dynamic URLs are TP; config/`self.x` URLs are FP |
 | AG012 model-controlled SQL | 786 | **Medium** — f-string/var queries TP |

@@ -161,3 +161,12 @@ cases:
   - {id: ag026-pos-llamaindex, rule: AG026, label: positive, code: "x = 1\n", files: {"requirements.txt": "llama-index-core==0.12.40\n"}}
   - {id: ag026-neg-llamaindex-patched, rule: AG026, label: negative, code: "x = 1\n", files: {"requirements.txt": "llama-index-core==0.12.41\n"}}
 
+  # --- AG031 CORS wildcard + credentials ---
+  - {id: ag031-pos-fastapi, rule: AG031, label: positive, code: "app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_credentials=True)\n"}
+  - {id: ag031-pos-flask, rule: AG031, label: positive, code: "CORS(app, origins='*', supports_credentials=True)\n"}
+  - {id: ag031-neg-nocreds, rule: AG031, label: negative, code: "app.add_middleware(CORSMiddleware, allow_origins=['*'])\n"}
+  - {id: ag031-neg-specific, rule: AG031, label: negative, code: "app.add_middleware(CORSMiddleware, allow_origins=['https://app.example.com'], allow_credentials=True)\n"}
+
+  # --- AG032 disabled safety filter ---
+  - {id: ag032-pos, rule: AG032, label: positive, code: "cfg = {cat: HarmBlockThreshold.BLOCK_NONE}\n"}
+  - {id: ag032-neg, rule: AG032, label: negative, code: "cfg = {cat: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE}\n"}

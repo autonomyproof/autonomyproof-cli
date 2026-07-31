@@ -8,7 +8,9 @@ from autonomyproof.models import Severity
 from autonomyproof.rules.base import ProjectContext
 from autonomyproof.rules.harness import (
     CodeExecutingAgentRule,
+    CorsWildcardCredentialsRule,
     DangerousFrameworkFlagRule,
+    DisabledSafetyFilterRule,
     InterpreterToolExposedRule,
     KnownVulnerableDependencyRule,
     PublicShareRule,
@@ -233,3 +235,42 @@ def test_ag026_llama_index_pickle_flagged() -> None:
         KnownVulnerableDependencyRule().check_project(_pctx({"llama-index-core": "0.12.40"}))
     )
     assert "CVE-2025-3108" in {c for f in findings for c in f.mappings.cve}
+
+
+# --- AG031 CORS wildcard + credentials ----------------------------------------
+def test_ag031_fastapi_cors_wildcard_creds() -> None:
+    code = "app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_credentials=True)\n"
+    findings = run_rule(CorsWildcardCredentialsRule(), code)
+    assert findings[0].ruleId == "AG031"
+
+
+def test_ag031_flask_cors_wildcard_creds() -> None:
+    assert run_rule(
+        CorsWildcardCredentialsRule(), "CORS(app, origins='*', supports_credentials=True)\n"
+    )
+
+
+def test_ag031_wildcard_without_credentials_clean() -> None:
+    code = "app.add_middleware(CORSMiddleware, allow_origins=['*'])\n"
+    assert run_rule(CorsWildcardCredentialsRule(), code) == []
+
+
+def test_ag031_credentials_with_specific_origin_clean() -> None:
+    code = "app.add_middleware(CORSMiddleware, allow_origins=['https://app.example.com'], allow_credentials=True)\n"
+    assert run_rule(CorsWildcardCredentialsRule(), code) == []
+
+
+# --- AG032 disabled safety filter ---------------------------------------------
+def test_ag032_block_none() -> None:
+    code = "cfg = {cat: HarmBlockThreshold.BLOCK_NONE}\n"
+    findings = run_rule(DisabledSafetyFilterRule(), code)
+    assert findings[0].ruleId == "AG032"
+
+
+def test_ag032_block_threshold_clean() -> None:
+    assert (
+        run_rule(
+            DisabledSafetyFilterRule(), "cfg = {cat: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE}\n"
+        )
+        == []
+    )

@@ -81,6 +81,10 @@ def _is_false_literal(node: ast.expr | None) -> bool:
     return isinstance(node, ast.Constant) and node.value is False
 
 
+# CORS kwargs: a wildcard origin combined with credentials is an always-invalid misconfig.
+_WILDCARD_ORIGIN_KWARGS = ("allow_origins", "origins")
+_CREDENTIALS_KWARGS = ("allow_credentials", "supports_credentials")
+
 _HARNESS_MAPPINGS = Mappings(
     owaspAgentic=["Tool misuse", "Excessive agency"],
     nistAiRmf=["Govern", "Measure", "Manage"],
@@ -343,4 +347,74 @@ class PublicShareRule(Rule):
             ):
                 yield self.make_finding(
                     ctx, call, evidence="UI launched with share=True (public tunnel)"
+                )
+
+
+def _wildcard_origins(call: ast.Call) -> bool:
+    for name in _WILDCARD_ORIGIN_KWARGS:
+        value = keyword(call, name)
+        if isinstance(value, ast.Constant) and value.value == "*":
+            return True
+        if isinstance(value, ast.List) and any(
+            isinstance(e, ast.Constant) and e.value == "*" for e in value.elts
+        ):
+            return True
+    return False
+
+
+def _allows_credentials(call: ast.Call) -> bool:
+    return any(is_true_literal(keyword(call, name)) for name in _CREDENTIALS_KWARGS)
+
+
+class CorsWildcardCredentialsRule(Rule):
+    """AG031 — CORS wildcard origin combined with credentials."""
+
+    id = "AG031"
+    name = "CORS wildcard origin with credentials"
+    default_severity = Severity.HIGH
+    description = (
+        "CORS allows any origin (*) while also allowing credentials — an invalid, unsafe combo."
+    )
+    risk = (
+        "Wildcard origin plus credentials lets any site make authenticated cross-origin requests."
+    )
+    remediation = [
+        "Never combine allow_origins=['*'] with allow_credentials=True",
+        "Pin an explicit allowlist of trusted origins",
+        "Disable credentials for any endpoint that must allow all origins",
+    ]
+    mappings = replace(_HARNESS_MAPPINGS, mitre=["T1190"])
+
+    def check(self, ctx: RuleContext) -> Iterable[Finding]:
+        for call in ctx.analysis.calls:
+            if _wildcard_origins(call) and _allows_credentials(call):
+                yield self.make_finding(
+                    ctx, call, evidence="CORS allows any origin (*) together with credentials"
+                )
+
+
+class DisabledSafetyFilterRule(Rule):
+    """AG032 — Model safety filter disabled (BLOCK_NONE)."""
+
+    id = "AG032"
+    name = "Model safety filter disabled"
+    default_severity = Severity.MEDIUM
+    description = (
+        "A model safety threshold is set to BLOCK_NONE, disabling content safety filtering."
+    )
+    risk = "Disabling safety filters lets the agent produce unfiltered, potentially harmful output."
+    remediation = [
+        "Keep model safety thresholds enabled",
+        "Do not set harm-block thresholds to BLOCK_NONE in production",
+    ]
+    mappings = _HARNESS_MAPPINGS
+
+    def check(self, ctx: RuleContext) -> Iterable[Finding]:
+        for node in ast.walk(ctx.analysis.tree):
+            if isinstance(node, ast.Attribute) and node.attr == "BLOCK_NONE":
+                yield self.make_finding(
+                    ctx,
+                    node,
+                    evidence="Safety threshold set to BLOCK_NONE (filtering disabled)",
+                    pattern=f"{self.id}:BLOCK_NONE",
                 )
