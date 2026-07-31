@@ -58,6 +58,20 @@ _CVE_DB: tuple[CveRecord, ...] = (
         summary="Langflow unauthenticated RCE via /api/v1/validate/code (exec of user code)",
         mitre=("T1190",),  # Exploit Public-Facing Application
     ),
+    CveRecord(
+        cve="CVE-2025-34291",
+        package="langflow",
+        ranges=("<1.7.0",),
+        summary="Langflow account takeover + RCE via CORS/CSRF token-refresh chain (CISA KEV)",
+        mitre=("T1190",),
+    ),
+    CveRecord(
+        cve="CVE-2025-3108",
+        package="llama-index-core",
+        ranges=(">=0.11.15,<0.12.41",),
+        summary="LlamaIndex JsonPickleSerializer pickle deserialization RCE on untrusted data",
+        mitre=("AML.T0011",),
+    ),
 )
 
 

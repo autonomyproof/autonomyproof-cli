@@ -1,24 +1,24 @@
 {
   "repo_count": 25,
-  "total_files": 26053,
-  "total_findings": 6658,
+  "total_files": 26117,
+  "total_findings": 6447,
   "by_rule": {
     "AG001": 20,
-    "AG002": 94,
-    "AG003": 2035,
+    "AG002": 93,
+    "AG003": 2034,
     "AG004": 34,
     "AG005": 752,
     "AG006": 54,
     "AG007": 46,
-    "AG009": 379,
+    "AG009": 385,
     "AG011": 72,
-    "AG012": 786,
+    "AG012": 791,
     "AG013": 111,
     "AG014": 10,
     "AG015": 158,
-    "AG016": 30,
+    "AG016": 32,
     "AG017": 182,
-    "AG018": 1067,
+    "AG018": 1069,
     "AG019": 300,
     "AG020": 25,
     "AG021": 37,
@@ -28,15 +28,14 @@
     "AG025": 115,
     "AG026": 4,
     "AG028": 4,
-    "AG029": 1,
-    "AG030": 224
+    "AG029": 1
   },
   "per_repo": [
     {
       "repo": "mcp-python-sdk",
       "status": "ok",
       "files_scanned": 823,
-      "findings": 57,
+      "findings": 50,
       "by_rule": {
         "AG001": 1,
         "AG003": 6,
@@ -46,15 +45,14 @@
         "AG015": 1,
         "AG018": 7,
         "AG019": 3,
-        "AG020": 1,
-        "AG030": 7
+        "AG020": 1
       }
     },
     {
       "repo": "crewai",
       "status": "ok",
-      "files_scanned": 1278,
-      "findings": 383,
+      "files_scanned": 1281,
+      "findings": 360,
       "by_rule": {
         "AG002": 5,
         "AG003": 164,
@@ -66,19 +64,19 @@
         "AG013": 14,
         "AG014": 2,
         "AG015": 4,
+        "AG016": 2,
         "AG017": 2,
         "AG018": 73,
         "AG019": 33,
         "AG020": 1,
-        "AG021": 1,
-        "AG030": 25
+        "AG021": 1
       }
     },
     {
       "repo": "langgraph",
       "status": "ok",
       "files_scanned": 447,
-      "findings": 316,
+      "findings": 309,
       "by_rule": {
         "AG003": 52,
         "AG004": 1,
@@ -91,21 +89,20 @@
         "AG018": 3,
         "AG019": 69,
         "AG020": 1,
-        "AG021": 1,
-        "AG030": 7
+        "AG021": 1
       }
     },
     {
       "repo": "openai-agents",
       "status": "ok",
       "files_scanned": 841,
-      "findings": 301,
+      "findings": 294,
       "by_rule": {
         "AG002": 6,
         "AG003": 28,
         "AG005": 9,
         "AG007": 2,
-        "AG009": 34,
+        "AG009": 38,
         "AG012": 9,
         "AG013": 8,
         "AG015": 6,
@@ -115,36 +112,34 @@
         "AG019": 36,
         "AG020": 1,
         "AG022": 6,
-        "AG025": 105,
-        "AG030": 11
+        "AG025": 105
       }
     },
     {
       "repo": "pydantic-ai",
       "status": "ok",
-      "files_scanned": 599,
-      "findings": 85,
+      "files_scanned": 605,
+      "findings": 83,
       "by_rule": {
-        "AG002": 7,
+        "AG002": 6,
         "AG003": 17,
         "AG005": 7,
         "AG006": 1,
-        "AG009": 26,
+        "AG009": 27,
         "AG012": 4,
         "AG013": 1,
         "AG015": 2,
         "AG017": 2,
-        "AG018": 9,
+        "AG018": 11,
         "AG020": 1,
-        "AG021": 4,
-        "AG030": 4
+        "AG021": 4
       }
     },
     {
       "repo": "smolagents",
       "status": "ok",
       "files_scanned": 73,
-      "findings": 99,
+      "findings": 96,
       "by_rule": {
         "AG002": 6,
         "AG003": 28,
@@ -157,30 +152,28 @@
         "AG020": 1,
         "AG021": 3,
         "AG023": 2,
-        "AG024": 5,
-        "AG030": 3
+        "AG024": 5
       }
     },
     {
       "repo": "llama-deploy",
       "status": "ok",
       "files_scanned": 108,
-      "findings": 53,
+      "findings": 52,
       "by_rule": {
         "AG003": 30,
         "AG005": 3,
         "AG006": 5,
         "AG018": 11,
         "AG020": 1,
-        "AG022": 2,
-        "AG030": 1
+        "AG022": 2
       }
     },
     {
       "repo": "autogen-core",
       "status": "ok",
       "files_scanned": 546,
-      "findings": 134,
+      "findings": 129,
       "by_rule": {
         "AG002": 3,
         "AG003": 86,
@@ -191,8 +184,7 @@
         "AG018": 16,
         "AG019": 4,
         "AG020": 1,
-        "AG021": 2,
-        "AG030": 5
+        "AG021": 2
       }
     },
     {
@@ -209,8 +201,8 @@
     {
       "repo": "agno",
       "status": "ok",
-      "files_scanned": 4286,
-      "findings": 809,
+      "files_scanned": 4295,
+      "findings": 802,
       "by_rule": {
         "AG001": 2,
         "AG002": 8,
@@ -230,15 +222,14 @@
         "AG018": 113,
         "AG019": 47,
         "AG020": 1,
-        "AG021": 1,
-        "AG030": 7
+        "AG021": 1
       }
     },
     {
       "repo": "haystack",
       "status": "ok",
-      "files_scanned": 529,
-      "findings": 132,
+      "files_scanned": 541,
+      "findings": 130,
       "by_rule": {
         "AG002": 1,
         "AG003": 58,
@@ -249,23 +240,23 @@
         "AG018": 9,
         "AG020": 1,
         "AG021": 1,
-        "AG023": 50,
-        "AG030": 2
+        "AG023": 50
       }
     },
     {
       "repo": "litellm",
       "status": "ok",
-      "files_scanned": 5073,
-      "findings": 895,
+      "files_scanned": 5084,
+      "findings": 878,
       "by_rule": {
         "AG001": 2,
         "AG002": 3,
-        "AG003": 402,
+        "AG003": 401,
         "AG004": 5,
         "AG005": 79,
         "AG006": 21,
         "AG009": 92,
+        "AG012": 5,
         "AG014": 1,
         "AG015": 13,
         "AG017": 71,
@@ -273,15 +264,14 @@
         "AG019": 18,
         "AG020": 1,
         "AG022": 2,
-        "AG023": 2,
-        "AG030": 21
+        "AG023": 2
       }
     },
     {
       "repo": "guardrails",
       "status": "ok",
       "files_scanned": 354,
-      "findings": 59,
+      "findings": 54,
       "by_rule": {
         "AG003": 32,
         "AG005": 4,
@@ -289,15 +279,14 @@
         "AG012": 4,
         "AG018": 10,
         "AG019": 2,
-        "AG020": 1,
-        "AG030": 5
+        "AG020": 1
       }
     },
     {
       "repo": "letta",
       "status": "ok",
       "files_scanned": 878,
-      "findings": 713,
+      "findings": 708,
       "by_rule": {
         "AG001": 1,
         "AG002": 13,
@@ -314,21 +303,20 @@
         "AG020": 1,
         "AG021": 3,
         "AG024": 1,
-        "AG026": 2,
-        "AG030": 5
+        "AG026": 2
       }
     },
     {
       "repo": "livekit-agents",
       "status": "ok",
-      "files_scanned": 878,
-      "findings": 133,
+      "files_scanned": 901,
+      "findings": 131,
       "by_rule": {
         "AG002": 2,
         "AG003": 16,
         "AG005": 2,
         "AG007": 5,
-        "AG009": 67,
+        "AG009": 68,
         "AG012": 4,
         "AG013": 8,
         "AG015": 12,
@@ -337,15 +325,14 @@
         "AG020": 1,
         "AG021": 2,
         "AG022": 1,
-        "AG025": 1,
-        "AG030": 3
+        "AG025": 1
       }
     },
     {
       "repo": "browser-use",
       "status": "ok",
       "files_scanned": 370,
-      "findings": 109,
+      "findings": 101,
       "by_rule": {
         "AG002": 2,
         "AG003": 47,
@@ -355,15 +342,14 @@
         "AG016": 7,
         "AG017": 1,
         "AG018": 17,
-        "AG020": 1,
-        "AG030": 8
+        "AG020": 1
       }
     },
     {
       "repo": "gpt-researcher",
       "status": "ok",
       "files_scanned": 274,
-      "findings": 75,
+      "findings": 74,
       "by_rule": {
         "AG003": 45,
         "AG005": 16,
@@ -371,15 +357,14 @@
         "AG018": 9,
         "AG020": 1,
         "AG021": 1,
-        "AG022": 1,
-        "AG030": 1
+        "AG022": 1
       }
     },
     {
       "repo": "semantic-kernel",
       "status": "ok",
       "files_scanned": 1246,
-      "findings": 171,
+      "findings": 166,
       "by_rule": {
         "AG003": 82,
         "AG005": 1,
@@ -392,15 +377,14 @@
         "AG018": 1,
         "AG019": 8,
         "AG020": 1,
-        "AG025": 9,
-        "AG030": 5
+        "AG025": 9
       }
     },
     {
       "repo": "promptflow",
       "status": "ok",
       "files_scanned": 1637,
-      "findings": 671,
+      "findings": 641,
       "by_rule": {
         "AG001": 13,
         "AG002": 6,
@@ -415,15 +399,14 @@
         "AG020": 1,
         "AG021": 9,
         "AG022": 5,
-        "AG023": 31,
-        "AG030": 30
+        "AG023": 31
       }
     },
     {
       "repo": "langflow",
       "status": "ok",
       "files_scanned": 3566,
-      "findings": 884,
+      "findings": 817,
       "by_rule": {
         "AG002": 24,
         "AG003": 92,
@@ -444,8 +427,7 @@
         "AG022": 5,
         "AG024": 2,
         "AG028": 4,
-        "AG029": 1,
-        "AG030": 67
+        "AG029": 1
       }
     },
     {
@@ -461,7 +443,7 @@
       "repo": "dspy",
       "status": "ok",
       "files_scanned": 261,
-      "findings": 113,
+      "findings": 110,
       "by_rule": {
         "AG003": 66,
         "AG005": 10,
@@ -471,8 +453,7 @@
         "AG018": 19,
         "AG020": 1,
         "AG021": 2,
-        "AG026": 2,
-        "AG030": 3
+        "AG026": 2
       }
     },
     {
@@ -500,7 +481,7 @@
       "repo": "mem0",
       "status": "ok",
       "files_scanned": 362,
-      "findings": 191,
+      "findings": 188,
       "by_rule": {
         "AG003": 85,
         "AG004": 1,
@@ -509,15 +490,14 @@
         "AG012": 31,
         "AG018": 26,
         "AG019": 16,
-        "AG020": 1,
-        "AG030": 3
+        "AG020": 1
       }
     },
     {
       "repo": "marvin",
       "status": "ok",
       "files_scanned": 179,
-      "findings": 63,
+      "findings": 62,
       "by_rule": {
         "AG001": 1,
         "AG002": 2,
@@ -532,8 +512,7 @@
         "AG017": 2,
         "AG018": 3,
         "AG020": 1,
-        "AG023": 3,
-        "AG030": 1
+        "AG023": 3
       }
     }
   ]

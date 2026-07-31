@@ -10,7 +10,7 @@ import ast
 from collections.abc import Iterable
 from dataclasses import replace
 
-from autonomyproof.astutils import is_true_literal
+from autonomyproof.astutils import is_true_literal, keyword
 from autonomyproof.cve import known_vulnerabilities
 from autonomyproof.models import Finding, Mappings, Severity
 from autonomyproof.rules.base import ProjectContext, Rule, RuleContext
@@ -315,4 +315,32 @@ class UnrestrictedRequestToolRule(Rule):
                     call,
                     evidence=f"{match} exposes unrestricted outbound HTTP to the agent",
                     pattern=f"{self.id}:{match}",
+                )
+
+
+class PublicShareRule(Rule):
+    """AG030 — Agent UI exposed via a public tunnel (share=True)."""
+
+    id = "AG030"
+    name = "Agent UI exposed via public tunnel"
+    default_severity = Severity.HIGH
+    description = "A UI launch opens a public share tunnel (share=True), exposing the agent."
+    risk = "A public tunnel exposes the agent and its tools to the internet without authentication."
+    remediation = [
+        "Remove share=True",
+        "Serve behind authentication on a private network",
+        "Never expose an agent with tools or credentials via a public tunnel",
+    ]
+    mappings = replace(_HARNESS_MAPPINGS, mitre=["T1190"])
+
+    def check(self, ctx: RuleContext) -> Iterable[Finding]:
+        for call in ctx.analysis.calls:
+            func = call.func
+            if (
+                isinstance(func, ast.Attribute)
+                and func.attr == "launch"
+                and is_true_literal(keyword(call, "share"))
+            ):
+                yield self.make_finding(
+                    ctx, call, evidence="UI launched with share=True (public tunnel)"
                 )

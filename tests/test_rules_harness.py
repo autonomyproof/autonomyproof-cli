@@ -11,6 +11,7 @@ from autonomyproof.rules.harness import (
     DangerousFrameworkFlagRule,
     InterpreterToolExposedRule,
     KnownVulnerableDependencyRule,
+    PublicShareRule,
     SandboxDisabledRule,
     UnrestrictedRequestToolRule,
 )
@@ -201,3 +202,34 @@ def test_ag029_requests_tool() -> None:
 
 def test_ag029_safe_tool_clean() -> None:
     assert run_rule(UnrestrictedRequestToolRule(), "t = CalculatorTool()\n") == []
+
+
+# --- AG030 public share tunnel -------------------------------------------------
+def test_ag030_share_true() -> None:
+    findings = run_rule(PublicShareRule(), "demo.launch(share=True)\n")
+    assert findings[0].ruleId == "AG030"
+
+
+def test_ag030_share_false_clean() -> None:
+    assert run_rule(PublicShareRule(), "demo.launch(share=False)\n") == []
+
+
+def test_ag030_no_share_clean() -> None:
+    assert run_rule(PublicShareRule(), "demo.launch(server_port=7860)\n") == []
+
+
+def test_ag030_non_launch_clean() -> None:
+    assert run_rule(PublicShareRule(), "config.set(share=True)\n") == []
+
+
+# --- AG026 additional CVEs -----------------------------------------------------
+def test_ag026_langflow_34291_flagged() -> None:
+    findings = list(KnownVulnerableDependencyRule().check_project(_pctx({"langflow": "1.6.9"})))
+    assert "CVE-2025-34291" in {c for f in findings for c in f.mappings.cve}
+
+
+def test_ag026_llama_index_pickle_flagged() -> None:
+    findings = list(
+        KnownVulnerableDependencyRule().check_project(_pctx({"llama-index-core": "0.12.40"}))
+    )
+    assert "CVE-2025-3108" in {c for f in findings for c in f.mappings.cve}

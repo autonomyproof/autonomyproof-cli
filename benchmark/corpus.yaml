@@ -134,7 +134,7 @@ cases:
 
   # --- AG026 (langflow RCE, version-gated) ---
   - {id: ag026-pos-langflow, rule: AG026, label: positive, code: "x = 1\n", files: {"requirements.txt": "langflow==1.2.0\n"}}
-  - {id: ag026-neg-langflow-patched, rule: AG026, label: negative, code: "x = 1\n", files: {"requirements.txt": "langflow==1.3.0\n"}}
+  - {id: ag026-neg-langflow-patched, rule: AG026, label: negative, code: "x = 1\n", files: {"requirements.txt": "langflow==1.7.0\n"}}
 
   # --- AG027 code-execution sandbox disabled ---
   - {id: ag027-pos-dict, rule: AG027, label: positive, code: "agent = UserProxyAgent(code_execution_config={'use_docker': False})\n"}
@@ -150,4 +150,14 @@ cases:
   # --- AG029 unrestricted HTTP request tool ---
   - {id: ag029-pos-get, rule: AG029, label: positive, code: "tool = RequestsGetTool()\n"}
   - {id: ag029-neg-safe, rule: AG029, label: negative, code: "tool = CalculatorTool()\n"}
+
+  # --- AG030 public share tunnel ---
+  - {id: ag030-pos-share, rule: AG030, label: positive, code: "demo.launch(share=True)\n"}
+  - {id: ag030-neg-noshare, rule: AG030, label: negative, code: "demo.launch(share=False)\n"}
+  - {id: ag030-neg-nolaunch, rule: AG030, label: negative, code: "config.set(share=True)\n"}
+
+  # --- AG026 additional CVEs (version-gated) ---
+  - {id: ag026-pos-langflow-34291, rule: AG026, label: positive, code: "x = 1\n", files: {"requirements.txt": "langflow==1.6.9\n"}}
+  - {id: ag026-pos-llamaindex, rule: AG026, label: positive, code: "x = 1\n", files: {"requirements.txt": "llama-index-core==0.12.40\n"}}
+  - {id: ag026-neg-llamaindex-patched, rule: AG026, label: negative, code: "x = 1\n", files: {"requirements.txt": "llama-index-core==0.12.41\n"}}
 

@@ -30,7 +30,7 @@ def test_scan_produces_findings_and_metadata(tmp_path: Path) -> None:
     assert result.score < 100
     assert result.risk_level
     assert result.files_scanned == 1
-    assert len(result.rules_executed) == 29
+    assert len(result.rules_executed) == 30
     assert any(c.name == "Shell execution" for c in result.capabilities)
 
 
