@@ -1,6 +1,6 @@
 # Labeled-corpus results (ground-truth precision & recall)
 
-**Cases:** 111 · **Rules covered:** 26 · **Overall precision:** 1.000 · **Overall recall:** 1.000
+**Cases:** 116 · **Rules covered:** 26 · **Overall precision:** 1.000 · **Overall recall:** 1.000
 
 | Rule | pos | neg | TP | FP | FN | Precision | Recall | F1 |
 |---|--:|--:|--:|--:|--:|--:|--:|--:|
@@ -23,7 +23,7 @@
 | AG023 | 2 | 3 | 2 | 0 | 0 | 1.00 | 1.00 | 1.00 |
 | AG024 | 4 | 3 | 4 | 0 | 0 | 1.00 | 1.00 | 1.00 |
 | AG025 | 4 | 3 | 4 | 0 | 0 | 1.00 | 1.00 | 1.00 |
-| AG026 | 5 | 4 | 5 | 0 | 0 | 1.00 | 1.00 | 1.00 |
+| AG026 | 8 | 6 | 8 | 0 | 0 | 1.00 | 1.00 | 1.00 |
 | AG027 | 2 | 2 | 2 | 0 | 0 | 1.00 | 1.00 | 1.00 |
 | AG028 | 2 | 1 | 2 | 0 | 0 | 1.00 | 1.00 | 1.00 |
 | AG029 | 1 | 1 | 1 | 0 | 0 | 1.00 | 1.00 | 1.00 |
@@ -31,7 +31,7 @@
 | AG031 | 2 | 2 | 2 | 0 | 0 | 1.00 | 1.00 | 1.00 |
 | AG032 | 1 | 1 | 1 | 0 | 0 | 1.00 | 1.00 | 1.00 |
 
-**Totals:** TP 57 · FP 0 · FN 0 · TN 54
+**Totals:** TP 60 · FP 0 · FN 0 · TN 56
 
 Precision = of the cases where a rule fired, how many were true positives. Recall = of the cases where a rule should fire, how many did. Reproduce with `python benchmark/corpus_eval.py`.
 

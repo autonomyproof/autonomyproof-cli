@@ -44,3 +44,23 @@ def test_matches_langflow_rce() -> None:
 def test_langflow_patched_is_clean() -> None:
     # 1.7.0 fixes both langflow CVEs in the registry.
     assert known_vulnerabilities({"langflow": "1.7.0"}) == []
+
+
+def test_matches_vllm_rce() -> None:
+    assert "CVE-2025-62164" in {m.cve for m in known_vulnerabilities({"vllm": "0.11.0"})}
+
+
+def test_vllm_patched_clean() -> None:
+    assert known_vulnerabilities({"vllm": "0.11.1"}) == []
+
+
+def test_matches_llama_stack_rce() -> None:
+    assert "CVE-2024-50050" in {m.cve for m in known_vulnerabilities({"llama-stack": "0.0.40"})}
+
+
+def test_matches_gradio_path_traversal() -> None:
+    assert "CVE-2025-48889" in {m.cve for m in known_vulnerabilities({"gradio": "5.30.0"})}
+
+
+def test_gradio_patched_clean() -> None:
+    assert known_vulnerabilities({"gradio": "5.31.0"}) == []

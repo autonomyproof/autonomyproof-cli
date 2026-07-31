@@ -72,6 +72,27 @@ _CVE_DB: tuple[CveRecord, ...] = (
         summary="LlamaIndex JsonPickleSerializer pickle deserialization RCE on untrusted data",
         mitre=("AML.T0011",),
     ),
+    CveRecord(
+        cve="CVE-2025-62164",
+        package="vllm",
+        ranges=(">=0.10.2,<0.11.1",),
+        summary="vLLM memory-corruption RCE via unsafe tensor deserialization (Completions API)",
+        mitre=("AML.T0011",),
+    ),
+    CveRecord(
+        cve="CVE-2024-50050",
+        package="llama-stack",
+        ranges=("<0.0.41",),
+        summary="Llama Stack pickle deserialization RCE over socket transport",
+        mitre=("AML.T0011",),
+    ),
+    CveRecord(
+        cve="CVE-2025-48889",
+        package="gradio",
+        ranges=("<5.31.0",),
+        summary="Gradio arbitrary file read via path traversal (secret theft from the host)",
+        mitre=("T1552",),
+    ),
 )
 
 
