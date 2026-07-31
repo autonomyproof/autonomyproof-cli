@@ -27,3 +27,20 @@ dspy https://github.com/stanfordnlp/dspy
 phidata https://github.com/agno-agi/phidata
 mem0 https://github.com/mem0ai/mem0
 marvin https://github.com/PrefectHQ/marvin
+# Round 2 expansion (toward ~50; any that fail to clone are skipped).
+swarm https://github.com/openai/swarm
+adk-python https://github.com/google/adk-python
+camel https://github.com/camel-ai/camel
+swarms https://github.com/kyegomez/swarms
+tinytroupe https://github.com/microsoft/TinyTroupe
+langroid https://github.com/langroid/langroid
+multi-agent-orchestrator https://github.com/awslabs/multi-agent-orchestrator
+anthropic-cookbook https://github.com/anthropics/anthropic-cookbook
+pipecat https://github.com/pipecat-ai/pipecat
+aider https://github.com/Aider-AI/aider
+open-interpreter https://github.com/OpenInterpreter/open-interpreter
+swe-agent https://github.com/SWE-agent/SWE-agent
+beeai-framework https://github.com/i-am-bee/beeai-framework
+agentscope https://github.com/modelscope/agentscope
+superagi https://github.com/TransformerOptimus/SuperAGI
+metagpt https://github.com/geekan/MetaGPT

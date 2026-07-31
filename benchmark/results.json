@@ -1,35 +1,36 @@
 {
-  "repo_count": 25,
-  "total_files": 26117,
-  "total_findings": 6451,
+  "repo_count": 41,
+  "total_files": 34722,
+  "total_findings": 9148,
   "by_rule": {
-    "AG001": 20,
-    "AG002": 93,
-    "AG003": 2034,
-    "AG004": 34,
-    "AG005": 752,
-    "AG006": 54,
-    "AG007": 46,
-    "AG009": 385,
-    "AG011": 72,
-    "AG012": 791,
-    "AG013": 111,
-    "AG014": 10,
-    "AG015": 158,
-    "AG016": 32,
-    "AG017": 182,
-    "AG018": 1069,
-    "AG019": 300,
-    "AG020": 25,
-    "AG021": 37,
-    "AG022": 22,
-    "AG023": 88,
-    "AG024": 8,
-    "AG025": 115,
-    "AG026": 4,
+    "AG001": 39,
+    "AG002": 156,
+    "AG003": 3392,
+    "AG004": 54,
+    "AG005": 1004,
+    "AG006": 71,
+    "AG007": 51,
+    "AG009": 537,
+    "AG011": 73,
+    "AG012": 820,
+    "AG013": 151,
+    "AG014": 11,
+    "AG015": 254,
+    "AG016": 35,
+    "AG017": 215,
+    "AG018": 1496,
+    "AG019": 401,
+    "AG020": 41,
+    "AG021": 58,
+    "AG022": 28,
+    "AG023": 111,
+    "AG024": 12,
+    "AG025": 120,
+    "AG026": 7,
     "AG028": 4,
     "AG029": 1,
-    "AG031": 4
+    "AG031": 5,
+    "AG032": 1
   },
   "per_repo": [
     {
@@ -517,6 +518,302 @@
         "AG018": 3,
         "AG020": 1,
         "AG023": 3
+      }
+    },
+    {
+      "repo": "swarm",
+      "status": "ok",
+      "files_scanned": 62,
+      "findings": 20,
+      "by_rule": {
+        "AG003": 16,
+        "AG009": 2,
+        "AG012": 1,
+        "AG020": 1
+      }
+    },
+    {
+      "repo": "adk-python",
+      "status": "ok",
+      "files_scanned": 1708,
+      "findings": 340,
+      "by_rule": {
+        "AG002": 4,
+        "AG003": 187,
+        "AG004": 9,
+        "AG005": 29,
+        "AG006": 2,
+        "AG007": 5,
+        "AG009": 15,
+        "AG013": 12,
+        "AG015": 10,
+        "AG017": 3,
+        "AG018": 43,
+        "AG019": 7,
+        "AG020": 1,
+        "AG021": 9,
+        "AG023": 3,
+        "AG025": 1
+      }
+    },
+    {
+      "repo": "camel",
+      "status": "ok",
+      "files_scanned": 1142,
+      "findings": 508,
+      "by_rule": {
+        "AG001": 6,
+        "AG002": 11,
+        "AG003": 283,
+        "AG005": 69,
+        "AG006": 6,
+        "AG009": 14,
+        "AG012": 4,
+        "AG017": 1,
+        "AG018": 100,
+        "AG019": 9,
+        "AG020": 1,
+        "AG021": 1,
+        "AG024": 2,
+        "AG026": 1
+      }
+    },
+    {
+      "repo": "swarms",
+      "status": "ok",
+      "files_scanned": 944,
+      "findings": 310,
+      "by_rule": {
+        "AG001": 1,
+        "AG002": 2,
+        "AG003": 157,
+        "AG004": 2,
+        "AG005": 29,
+        "AG006": 2,
+        "AG009": 3,
+        "AG012": 5,
+        "AG013": 12,
+        "AG014": 1,
+        "AG015": 45,
+        "AG016": 3,
+        "AG017": 10,
+        "AG018": 36,
+        "AG019": 1,
+        "AG020": 1
+      }
+    },
+    {
+      "repo": "tinytroupe",
+      "status": "ok",
+      "files_scanned": 110,
+      "findings": 103,
+      "by_rule": {
+        "AG003": 94,
+        "AG005": 2,
+        "AG015": 1,
+        "AG017": 1,
+        "AG018": 4,
+        "AG020": 1
+      }
+    },
+    {
+      "repo": "langroid",
+      "status": "ok",
+      "files_scanned": 438,
+      "findings": 150,
+      "by_rule": {
+        "AG002": 12,
+        "AG003": 57,
+        "AG005": 12,
+        "AG009": 11,
+        "AG012": 12,
+        "AG013": 4,
+        "AG017": 7,
+        "AG018": 23,
+        "AG019": 10,
+        "AG020": 1,
+        "AG021": 1
+      }
+    },
+    {
+      "repo": "multi-agent-orchestrator",
+      "status": "ok",
+      "files_scanned": 113,
+      "findings": 29,
+      "by_rule": {
+        "AG003": 1,
+        "AG009": 8,
+        "AG015": 13,
+        "AG018": 3,
+        "AG019": 2,
+        "AG020": 1,
+        "AG031": 1
+      }
+    },
+    {
+      "repo": "anthropic-cookbook",
+      "status": "ok",
+      "files_scanned": 117,
+      "findings": 76,
+      "by_rule": {
+        "AG003": 44,
+        "AG004": 2,
+        "AG005": 5,
+        "AG009": 4,
+        "AG012": 7,
+        "AG017": 1,
+        "AG018": 4,
+        "AG019": 2,
+        "AG020": 1,
+        "AG021": 4,
+        "AG026": 2
+      }
+    },
+    {
+      "repo": "pipecat",
+      "status": "ok",
+      "files_scanned": 1157,
+      "findings": 144,
+      "by_rule": {
+        "AG003": 45,
+        "AG004": 3,
+        "AG005": 2,
+        "AG009": 54,
+        "AG013": 8,
+        "AG015": 10,
+        "AG017": 4,
+        "AG018": 12,
+        "AG020": 1,
+        "AG021": 2,
+        "AG023": 1,
+        "AG024": 1,
+        "AG032": 1
+      }
+    },
+    {
+      "repo": "aider",
+      "status": "ok",
+      "files_scanned": 144,
+      "findings": 233,
+      "by_rule": {
+        "AG001": 4,
+        "AG002": 1,
+        "AG003": 126,
+        "AG004": 2,
+        "AG005": 27,
+        "AG009": 5,
+        "AG017": 1,
+        "AG018": 58,
+        "AG019": 2,
+        "AG020": 1,
+        "AG022": 6
+      }
+    },
+    {
+      "repo": "open-interpreter",
+      "status": "ok",
+      "files_scanned": 134,
+      "findings": 95,
+      "by_rule": {
+        "AG002": 2,
+        "AG003": 31,
+        "AG005": 8,
+        "AG009": 7,
+        "AG015": 1,
+        "AG018": 45,
+        "AG020": 1
+      }
+    },
+    {
+      "repo": "swe-agent",
+      "status": "ok",
+      "files_scanned": 100,
+      "findings": 64,
+      "by_rule": {
+        "AG001": 1,
+        "AG003": 19,
+        "AG004": 1,
+        "AG005": 4,
+        "AG006": 2,
+        "AG009": 2,
+        "AG018": 15,
+        "AG019": 2,
+        "AG020": 1,
+        "AG023": 17
+      }
+    },
+    {
+      "repo": "beeai-framework",
+      "status": "ok",
+      "files_scanned": 577,
+      "findings": 35,
+      "by_rule": {
+        "AG003": 7,
+        "AG005": 8,
+        "AG006": 2,
+        "AG009": 2,
+        "AG013": 4,
+        "AG015": 1,
+        "AG017": 1,
+        "AG018": 5,
+        "AG020": 1,
+        "AG025": 4
+      }
+    },
+    {
+      "repo": "agentscope",
+      "status": "ok",
+      "files_scanned": 508,
+      "findings": 239,
+      "by_rule": {
+        "AG003": 137,
+        "AG005": 7,
+        "AG006": 1,
+        "AG009": 15,
+        "AG015": 9,
+        "AG017": 1,
+        "AG018": 1,
+        "AG019": 65,
+        "AG020": 1,
+        "AG023": 2
+      }
+    },
+    {
+      "repo": "superagi",
+      "status": "ok",
+      "files_scanned": 461,
+      "findings": 154,
+      "by_rule": {
+        "AG002": 18,
+        "AG003": 44,
+        "AG005": 41,
+        "AG009": 3,
+        "AG011": 1,
+        "AG015": 1,
+        "AG018": 45,
+        "AG020": 1
+      }
+    },
+    {
+      "repo": "metagpt",
+      "status": "ok",
+      "files_scanned": 890,
+      "findings": 197,
+      "by_rule": {
+        "AG001": 7,
+        "AG002": 13,
+        "AG003": 110,
+        "AG004": 1,
+        "AG005": 9,
+        "AG006": 2,
+        "AG009": 7,
+        "AG015": 5,
+        "AG017": 3,
+        "AG018": 33,
+        "AG019": 1,
+        "AG020": 1,
+        "AG021": 4,
+        "AG024": 1
       }
     }
   ]
