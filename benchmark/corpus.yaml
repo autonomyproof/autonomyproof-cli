@@ -170,3 +170,10 @@ cases:
   # --- AG032 disabled safety filter ---
   - {id: ag032-pos, rule: AG032, label: positive, code: "cfg = {cat: HarmBlockThreshold.BLOCK_NONE}\n"}
   - {id: ag032-neg, rule: AG032, label: negative, code: "cfg = {cat: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE}\n"}
+
+  # --- AG026 additional CVEs (vllm, llama-stack, gradio) ---
+  - {id: ag026-pos-vllm, rule: AG026, label: positive, code: "x = 1\n", files: {"requirements.txt": "vllm==0.11.0\n"}}
+  - {id: ag026-neg-vllm-patched, rule: AG026, label: negative, code: "x = 1\n", files: {"requirements.txt": "vllm==0.11.1\n"}}
+  - {id: ag026-pos-llamastack, rule: AG026, label: positive, code: "x = 1\n", files: {"requirements.txt": "llama-stack==0.0.40\n"}}
+  - {id: ag026-pos-gradio, rule: AG026, label: positive, code: "x = 1\n", files: {"requirements.txt": "gradio==5.30.0\n"}}
+  - {id: ag026-neg-gradio-patched, rule: AG026, label: negative, code: "x = 1\n", files: {"requirements.txt": "gradio==5.31.0\n"}}
