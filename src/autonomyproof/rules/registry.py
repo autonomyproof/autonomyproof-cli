@@ -26,6 +26,7 @@ from autonomyproof.rules.harness import (
     DangerousFrameworkFlagRule,
     InterpreterToolExposedRule,
     KnownVulnerableDependencyRule,
+    PublicShareRule,
     SandboxDisabledRule,
     UnrestrictedRequestToolRule,
 )
@@ -76,6 +77,7 @@ _RULE_CLASSES: list[type[Rule]] = [
     SandboxDisabledRule,  # AG027
     CodeExecutingAgentRule,  # AG028
     UnrestrictedRequestToolRule,  # AG029
+    PublicShareRule,  # AG030
 ]
 
 

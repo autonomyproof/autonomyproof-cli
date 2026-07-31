@@ -34,8 +34,13 @@ def test_unparseable_version_is_skipped() -> None:
 
 
 def test_matches_langflow_rce() -> None:
-    assert {m.cve for m in known_vulnerabilities({"langflow": "1.2.0"})} == {"CVE-2025-3248"}
+    # langflow 1.2.0 is in range for both the code-exec RCE and the CORS/CSRF chain.
+    assert {m.cve for m in known_vulnerabilities({"langflow": "1.2.0"})} == {
+        "CVE-2025-3248",
+        "CVE-2025-34291",
+    }
 
 
 def test_langflow_patched_is_clean() -> None:
-    assert known_vulnerabilities({"langflow": "1.3.0"}) == []
+    # 1.7.0 fixes both langflow CVEs in the registry.
+    assert known_vulnerabilities({"langflow": "1.7.0"}) == []
