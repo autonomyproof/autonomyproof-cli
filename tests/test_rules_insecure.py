@@ -101,3 +101,28 @@ def test_ag023_unrelated_from_string_is_clean() -> None:
 
 def test_ag023_from_string_on_non_name_receiver_clean() -> None:
     assert run_rule(TemplateInjectionRule(), "items[0].from_string(user_input)\n") == []
+
+
+def test_ag021_joblib_load() -> None:
+    assert run_rule(InsecureDeserializationRule(), "import joblib\njoblib.load(f)\n")
+
+
+def test_ag021_pandas_read_pickle() -> None:
+    assert run_rule(InsecureDeserializationRule(), "import pandas\npandas.read_pickle(f)\n")
+
+
+def test_ag021_numpy_allow_pickle_true() -> None:
+    code = "import numpy\nnumpy.load(f, allow_pickle=True)\n"
+    findings = run_rule(InsecureDeserializationRule(), code)
+    assert findings and findings[0].ruleId == "AG021"
+
+
+def test_ag021_numpy_default_clean() -> None:
+    assert run_rule(InsecureDeserializationRule(), "import numpy\nnumpy.load(f)\n") == []
+
+
+def test_ag021_numpy_allow_pickle_false_clean() -> None:
+    assert (
+        run_rule(InsecureDeserializationRule(), "import numpy\nnumpy.load(f, allow_pickle=False)\n")
+        == []
+    )

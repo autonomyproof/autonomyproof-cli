@@ -6,7 +6,7 @@ import ast
 from collections.abc import Iterable
 from dataclasses import replace
 
-from autonomyproof.astutils import is_model_controlled, keyword
+from autonomyproof.astutils import is_model_controlled, is_true_literal, keyword
 from autonomyproof.models import Finding, Mappings, Severity
 from autonomyproof.rules.base import Rule, RuleContext
 
@@ -21,6 +21,8 @@ _DESERIALIZE_SINKS = {
     "marshal.loads",
     "jsonpickle.decode",
     "torch.load",
+    "joblib.load",
+    "pandas.read_pickle",
 }
 _SAFE_YAML_LOADERS = {"SafeLoader", "CSafeLoader"}
 _UNVERIFIED_SSL = {"ssl._create_unverified_context"}
@@ -66,6 +68,10 @@ class InsecureDeserializationRule(Rule):
             if name in _DESERIALIZE_SINKS:
                 yield self.make_finding(
                     ctx, call, evidence=f"{name}(...) deserializes untrusted data"
+                )
+            elif name == "numpy.load" and is_true_literal(keyword(call, "allow_pickle")):
+                yield self.make_finding(
+                    ctx, call, evidence="numpy.load(allow_pickle=True) can execute pickled code"
                 )
             elif name == "yaml.load" and not self._has_safe_loader(call):
                 yield self.make_finding(

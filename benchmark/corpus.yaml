@@ -177,3 +177,9 @@ cases:
   - {id: ag026-pos-llamastack, rule: AG026, label: positive, code: "x = 1\n", files: {"requirements.txt": "llama-stack==0.0.40\n"}}
   - {id: ag026-pos-gradio, rule: AG026, label: positive, code: "x = 1\n", files: {"requirements.txt": "gradio==5.30.0\n"}}
   - {id: ag026-neg-gradio-patched, rule: AG026, label: negative, code: "x = 1\n", files: {"requirements.txt": "gradio==5.31.0\n"}}
+
+  # --- AG021 broadened deserialization sinks ---
+  - {id: ag021-pos-joblib, rule: AG021, label: positive, code: "import joblib\njoblib.load(f)\n"}
+  - {id: ag021-pos-pandas, rule: AG021, label: positive, code: "import pandas\npandas.read_pickle(f)\n"}
+  - {id: ag021-pos-numpy, rule: AG021, label: positive, code: "import numpy\nnumpy.load(f, allow_pickle=True)\n"}
+  - {id: ag021-neg-numpy, rule: AG021, label: negative, code: "import numpy\nnumpy.load(f)\n"}
