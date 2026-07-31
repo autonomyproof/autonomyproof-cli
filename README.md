@@ -79,7 +79,7 @@ exploitability.
 
 ### Benchmark (we publish our own false-positive rate)
 
-We run the scanner against 25 real open-source agent/MCP/framework repos (~26,000 files) and
+We run the scanner against 41 real open-source agent/MCP/framework repos (~35,000 files) and
 publish the per-rule counts, an author-labeled precision read, and the known-noisy rules — see
 [benchmark/RESULTS.md](benchmark/RESULTS.md). Reproduce with `python benchmark/run.py`. The
 benchmark drives the accuracy backlog: it's what caught (and let us fix) the AG007, AG023, and
