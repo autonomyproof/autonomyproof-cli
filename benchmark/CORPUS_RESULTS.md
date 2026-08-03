@@ -1,6 +1,6 @@
 # Labeled-corpus results (ground-truth precision & recall)
 
-**Cases:** 120 · **Rules covered:** 26 · **Overall precision:** 1.000 · **Overall recall:** 1.000
+**Cases:** 127 · **Rules covered:** 27 · **Overall precision:** 1.000 · **Overall recall:** 1.000
 
 | Rule | pos | neg | TP | FP | FN | Precision | Recall | F1 |
 |---|--:|--:|--:|--:|--:|--:|--:|--:|
@@ -30,8 +30,9 @@
 | AG030 | 1 | 2 | 1 | 0 | 0 | 1.00 | 1.00 | 1.00 |
 | AG031 | 2 | 2 | 2 | 0 | 0 | 1.00 | 1.00 | 1.00 |
 | AG032 | 1 | 1 | 1 | 0 | 0 | 1.00 | 1.00 | 1.00 |
+| AG033 | 4 | 3 | 4 | 0 | 0 | 1.00 | 1.00 | 1.00 |
 
-**Totals:** TP 63 · FP 0 · FN 0 · TN 57
+**Totals:** TP 67 · FP 0 · FN 0 · TN 60
 
 Precision = of the cases where a rule fired, how many were true positives. Recall = of the cases where a rule should fire, how many did. Reproduce with `python benchmark/corpus_eval.py`.
 

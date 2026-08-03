@@ -6,6 +6,7 @@ from autonomyproof.rules.agent_controls import (
     DangerousOperationRule,
     ExcessiveLimitRule,
     GuardrailSelfModificationRule,
+    IrreversibleDataDestructionRule,
     McpArgumentValidationRule,
     SubAgentCreationRule,
 )
@@ -82,6 +83,7 @@ _RULE_CLASSES: list[type[Rule]] = [
     PublicShareRule,  # AG030
     CorsWildcardCredentialsRule,  # AG031
     DisabledSafetyFilterRule,  # AG032
+    IrreversibleDataDestructionRule,  # AG033
 ]
 
 
