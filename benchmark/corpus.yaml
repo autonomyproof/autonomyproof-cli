@@ -178,6 +178,15 @@ cases:
   - {id: ag026-pos-gradio, rule: AG026, label: positive, code: "x = 1\n", files: {"requirements.txt": "gradio==5.30.0\n"}}
   - {id: ag026-neg-gradio-patched, rule: AG026, label: negative, code: "x = 1\n", files: {"requirements.txt": "gradio==5.31.0\n"}}
 
+  # --- AG033 irreversible data destruction via agent tool ---
+  - {id: ag033-pos-dropall, rule: AG033, label: positive, code: "@tool\ndef reset_db():\n    Base.metadata.drop_all(engine)\n"}
+  - {id: ag033-pos-flushall, rule: AG033, label: positive, code: "@tool\ndef clear():\n    r.flushall()\n"}
+  - {id: ag033-pos-rmtree, rule: AG033, label: positive, code: "import shutil\n@tool\ndef cleanup(p):\n    shutil.rmtree(p)\n"}
+  - {id: ag033-pos-sql, rule: AG033, label: positive, code: "@tool\ndef wipe():\n    cur.execute('DROP DATABASE prod')\n"}
+  - {id: ag033-neg-nontool, rule: AG033, label: negative, code: "def reset_db():\n    Base.metadata.drop_all(engine)\n"}
+  - {id: ag033-neg-approval, rule: AG033, label: negative, code: "@tool\ndef reset_db():\n    if not confirm:\n        return\n    Base.metadata.drop_all(engine)\n"}
+  - {id: ag033-neg-pandas, rule: AG033, label: negative, code: "@tool\ndef trim(df):\n    return df.drop(columns=['x'])\n"}
+
   # --- AG021 broadened deserialization sinks ---
   - {id: ag021-pos-joblib, rule: AG021, label: positive, code: "import joblib\njoblib.load(f)\n"}
   - {id: ag021-pos-pandas, rule: AG021, label: positive, code: "import pandas\npandas.read_pickle(f)\n"}

@@ -6,6 +6,7 @@ from autonomyproof.rules.agent_controls import (
     DangerousOperationRule,
     ExcessiveLimitRule,
     GuardrailSelfModificationRule,
+    IrreversibleDataDestructionRule,
     McpArgumentValidationRule,
     SubAgentCreationRule,
 )
@@ -44,6 +45,56 @@ def test_ag007_non_dangerous_tool_clean() -> None:
     assert (
         run_rule(DangerousOperationRule(), "@tool\ndef summarize(text):\n    return text\n") == []
     )
+
+
+# --- AG033 --------------------------------------------------------------------
+def test_ag033_tool_drops_all_tables() -> None:
+    # A benignly-named tool whose body wipes the schema — AG007 (name-based) would miss it.
+    code = "@tool\ndef reset_db():\n    Base.metadata.drop_all(engine)\n"
+    findings = run_rule(IrreversibleDataDestructionRule(), code)
+    assert findings and findings[0].ruleId == "AG033"
+    assert findings[0].toolName == "reset_db"
+
+
+def test_ag033_tool_flushes_redis() -> None:
+    findings = run_rule(
+        IrreversibleDataDestructionRule(), "@tool\ndef clear():\n    redis_client.flushall()\n"
+    )
+    assert findings and findings[0].ruleId == "AG033"
+
+
+def test_ag033_tool_rmtree() -> None:
+    code = "import shutil\n@tool\ndef cleanup(path):\n    shutil.rmtree(path)\n"
+    assert run_rule(IrreversibleDataDestructionRule(), code)
+
+
+def test_ag033_tool_destructive_sql_literal() -> None:
+    code = '@tool\ndef wipe():\n    cursor.execute("DROP DATABASE prod")\n'
+    assert run_rule(IrreversibleDataDestructionRule(), code)
+
+
+def test_ag033_non_tool_function_clean() -> None:
+    # Same wipe in an ordinary migration helper is not agent-reachable authority.
+    code = "def reset_db():\n    Base.metadata.drop_all(engine)\n"
+    assert run_rule(IrreversibleDataDestructionRule(), code) == []
+
+
+def test_ag033_approval_gated_clean() -> None:
+    code = (
+        "@tool\ndef reset_db():\n    if not confirm:\n"
+        "        return\n    Base.metadata.drop_all(engine)\n"
+    )
+    assert run_rule(IrreversibleDataDestructionRule(), code) == []
+
+
+def test_ag033_pandas_drop_clean() -> None:
+    # Bare `.drop(` is overloaded (pandas column drop) — deliberately not matched.
+    code = "@tool\ndef trim(df):\n    return df.drop(columns=['x'])\n"
+    assert run_rule(IrreversibleDataDestructionRule(), code) == []
+
+
+def test_ag033_harmless_tool_clean() -> None:
+    assert run_rule(IrreversibleDataDestructionRule(), "@tool\ndef summarize(t):\n    return t\n") == []
 
 
 # --- AG009 --------------------------------------------------------------------

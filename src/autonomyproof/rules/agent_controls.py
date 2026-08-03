@@ -78,6 +78,24 @@ _AGENT_CTORS = {
 }
 _LIMIT_KWARGS = ("max", "limit", "budget")
 
+# AG033 — unambiguous "wipe the whole store" operations. Each name means "destroy everything"
+# and has no benign single-record meaning, so matching by attribute name stays zero-FP.
+_WIPE_METHODS = {
+    "drop_all",  # SQLAlchemy metadata.drop_all()
+    "drop_database",  # pymongo client.drop_database()
+    "drop_collection",  # pymongo db.drop_collection()
+    "delete_collection",  # chroma / vector stores
+    "delete_index",  # elasticsearch / pinecone
+    "flushall",  # redis FLUSHALL — every key in every db
+    "flushdb",  # redis FLUSHDB — every key in the db
+    "flush_all",  # memcached
+    "deleteall",  # solr / assorted clients
+}
+# Recursive filesystem delete resolved through import tracking (module.attr form).
+_WIPE_FUNCTIONS = {"shutil.rmtree", "os.removedirs"}
+# Destructive DDL embedded as a string and executed from inside a tool body.
+_DESTRUCTIVE_SQL = ("drop database", "drop table", "truncate table")
+
 _CTRL_MAPPINGS = Mappings(
     owaspAgentic=["Excessive agency", "Insufficient oversight"],
     nistAiRmf=["Govern", "Manage"],
@@ -135,6 +153,75 @@ class DangerousOperationRule(Rule):
                 tool_name=ctx.tool_functions.get(node.name, node.name),
                 pattern=f"{self.id}:{node.name}",
             )
+
+
+class IrreversibleDataDestructionRule(Rule):
+    """AG033 — Irreversible datastore/filesystem wipe exposed to the agent."""
+
+    id = "AG033"
+    name = "Irreversible data destruction exposed to the agent"
+    default_severity = Severity.CRITICAL
+    description = (
+        "An agent tool can wipe an entire datastore or directory tree with no approval step."
+    )
+    risk = (
+        "A manipulated agent could drop a database, flush a cache, or recursively delete "
+        "files — an irreversible action with no human in the loop."
+    )
+    remediation = [
+        "Remove the destructive call from the tool, or scope it to a single named target",
+        "Require human approval before any drop/flush/recursive-delete",
+        "Grant the agent least-privilege credentials that cannot destroy the store",
+        "Take a verified backup the operation cannot reach",
+    ]
+    mappings = Mappings(
+        owaspAgentic=["Excessive agency", "Tool misuse"],
+        nistAiRmf=["Govern", "Manage"],
+        iso42001Alignment=["Operational control", "Accountability"],
+        mitre=["T1485", "T1561"],  # Data Destruction, Disk Wipe
+    )
+
+    def check(self, ctx: RuleContext) -> Iterable[Finding]:
+        for node in ast.walk(ctx.analysis.tree):
+            if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                continue
+            # Only operations actually exposed to the model qualify — a destructive call in
+            # an ordinary migration script or admin helper is not agent-reachable authority.
+            if node.name not in ctx.tool_functions:
+                continue
+            if any(marker in _identifiers_in(node) for marker in _APPROVAL_MARKERS):
+                continue
+            hit = self._destructive_sink(ctx, node)
+            if hit is None:
+                continue
+            sink_node, evidence = hit
+            yield self.make_finding(
+                ctx,
+                sink_node,
+                evidence=evidence,
+                tool_name=ctx.tool_functions.get(node.name, node.name),
+                pattern=f"{self.id}:{node.name}",
+            )
+
+    def _destructive_sink(
+        self, ctx: RuleContext, func: ast.FunctionDef | ast.AsyncFunctionDef
+    ) -> tuple[ast.AST, str] | None:
+        for child in ast.walk(func):
+            if isinstance(child, ast.Call):
+                # Attribute calls whose name is an unambiguous full-store wipe (drop_all,
+                # flushall, drop_database, ...). Deliberately excludes the overloaded bare
+                # `.drop(` — pandas `df.drop(col)` is a benign column drop, not a wipe.
+                if isinstance(child.func, ast.Attribute) and child.func.attr in _WIPE_METHODS:
+                    return child, f"Tool '{func.name}' calls {child.func.attr}() — full-store wipe"
+                if ctx.analysis.resolve_call(child) in _WIPE_FUNCTIONS:
+                    name = ctx.analysis.resolve_call(child)
+                    return child, f"Tool '{func.name}' calls {name}() — recursive delete"
+            if isinstance(child, ast.Constant) and isinstance(child.value, str):
+                lowered = child.value.lower()
+                marker = next((m for m in _DESTRUCTIVE_SQL if m in lowered), None)
+                if marker is not None:
+                    return child, f"Tool '{func.name}' embeds destructive SQL: {marker!r}"
+        return None
 
 
 class ExcessiveLimitRule(Rule):
