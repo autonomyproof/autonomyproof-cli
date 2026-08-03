@@ -1,0 +1,36 @@
+name: "🎯 Report a false positive"
+description: A rule fired on code that is actually safe. These reports directly drive our accuracy work.
+title: "[false-positive] AG0XX on "
+labels: ["false-positive"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        False positives are the enemy — we publish our own FP benchmark and take these seriously.
+        The clearer the minimal repro, the faster it gets fixed (and it often becomes a corpus case).
+  - type: input
+    id: rule
+    attributes:
+      label: Which rule fired?
+      placeholder: "AG005"
+    validations:
+      required: true
+  - type: textarea
+    id: code
+    attributes:
+      label: Minimal code that was flagged (but is safe)
+      render: python
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why is it actually safe?
+      placeholder: "The URL comes from settings.API_URL, a trusted config constant, not model input."
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: "autonomyproof 0.15.0"

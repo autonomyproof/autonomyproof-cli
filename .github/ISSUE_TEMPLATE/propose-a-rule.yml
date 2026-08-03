@@ -1,0 +1,60 @@
+name: "🛡️ Propose a detection rule"
+description: Suggest a new authority/guardrail check for the scanner. Great first contribution.
+title: "[rule] "
+labels: ["rule-proposal", "help wanted"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping expand coverage! Every rule is small and self-contained —
+        one `Rule` subclass + a positive/negative test + a `benchmark/corpus.yaml` case.
+        See the [Add a rule guide](../blob/main/CONTRIBUTING.md#adding-a-security-rule).
+        The bar is **zero false positives on the real-repo benchmark** — that's the whole game.
+  - type: input
+    id: pattern
+    attributes:
+      label: What dangerous pattern should it detect?
+      description: One sentence — the authority or guardrail gap.
+      placeholder: "An agent tool that can wipe an entire datastore with no approval."
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Minimal example that SHOULD fire
+      description: A few lines of Python. This becomes the positive corpus case.
+      render: python
+      placeholder: |
+        @tool
+        def reset_db():
+            Base.metadata.drop_all(engine)
+    validations:
+      required: true
+  - type: textarea
+    id: negative
+    attributes:
+      label: A similar example that must NOT fire (the zero-FP guard)
+      description: The benign look-alike that keeps the rule honest.
+      render: python
+      placeholder: |
+        @tool
+        def trim(df):
+            return df.drop(columns=["x"])  # pandas column drop — benign
+    validations:
+      required: true
+  - type: input
+    id: frameworks
+    attributes:
+      label: Frameworks / libraries involved
+      placeholder: "SQLAlchemy, redis-py, pymongo"
+  - type: textarea
+    id: mappings
+    attributes:
+      label: Standards mappings (if known)
+      placeholder: "OWASP Agentic: Excessive agency · MITRE ATT&CK: T1485 · CVE: —"
+  - type: checkboxes
+    id: willing
+    attributes:
+      label: Would you like to implement it?
+      options:
+        - label: I'd like to open the PR myself (we'll help)

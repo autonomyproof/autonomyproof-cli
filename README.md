@@ -189,7 +189,18 @@ pytest            # runs the suite and enforces 100% branch coverage
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Commits must be signed off (DCO). Apache-2.0.
+**New detections are the best first contribution.** Each rule is small and self-contained —
+one class, a positive/negative test, and a benchmark case — and the real-repo benchmark tells
+you objectively whether it holds up: **it must add zero false positives on 41 real repos.**
+That's the whole game, and it makes for a satisfying, well-scoped PR.
+
+- 🔎 **Pick a rule to build** from the [wishlist in ROADMAP.md](ROADMAP.md) (`good first issue`).
+- 🛡️ **Propose your own** via the [rule proposal form](https://github.com/autonomyproof/autonomyproof-cli/issues/new?template=propose-a-rule.yml).
+- 🎯 **Found a false positive?** [Report it](https://github.com/autonomyproof/autonomyproof-cli/issues/new?template=false-positive.yml) — accuracy reports directly drive the backlog.
+- 💬 **Questions or ideas?** Open a [Discussion](https://github.com/autonomyproof/autonomyproof-cli/discussions).
+
+The full six-step "add a rule" walkthrough is in [CONTRIBUTING.md](CONTRIBUTING.md#adding-a-security-rule).
+Commits must be signed off (`git commit -s`, DCO). Apache-2.0.
 
 ## The rest of the platform
 
