@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 💬 Questions & ideas
+    url: https://github.com/autonomyproof/autonomyproof-cli/discussions
+    about: Ask a question, share how you use it, or float an idea before opening an issue.
+  - name: 🔒 Report a security vulnerability
+    url: https://github.com/autonomyproof/autonomyproof-cli/blob/main/SECURITY.md
+    about: Please do NOT open a public issue for vulnerabilities — follow the security policy.
