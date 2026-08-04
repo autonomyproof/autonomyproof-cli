@@ -94,7 +94,10 @@ def test_ag033_pandas_drop_clean() -> None:
 
 
 def test_ag033_harmless_tool_clean() -> None:
-    assert run_rule(IrreversibleDataDestructionRule(), "@tool\ndef summarize(t):\n    return t\n") == []
+    assert (
+        run_rule(IrreversibleDataDestructionRule(), "@tool\ndef summarize(t):\n    return t\n")
+        == []
+    )
 
 
 # --- AG009 --------------------------------------------------------------------
