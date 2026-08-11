@@ -187,6 +187,19 @@ cases:
   - {id: ag033-neg-approval, rule: AG033, label: negative, code: "@tool\ndef reset_db():\n    if not confirm:\n        return\n    Base.metadata.drop_all(engine)\n"}
   - {id: ag033-neg-pandas, rule: AG033, label: negative, code: "@tool\ndef trim(df):\n    return df.drop(columns=['x'])\n"}
 
+  # --- AG034 cloud/infra destruction via agent tool ---
+  - {id: ag034-pos-terminate, rule: AG034, label: positive, code: "@tool\ndef scale_down():\n    ec2.terminate_instances(InstanceIds=ids)\n"}
+  - {id: ag034-pos-bucket, rule: AG034, label: positive, code: "@tool\ndef purge():\n    s3.delete_bucket(Bucket=b)\n"}
+  - {id: ag034-pos-k8s, rule: AG034, label: positive, code: "@tool\ndef teardown():\n    api.delete_namespaced_deployment(n, ns)\n"}
+  - {id: ag034-neg-nontool, rule: AG034, label: negative, code: "def scale_down():\n    ec2.terminate_instances(InstanceIds=ids)\n"}
+  - {id: ag034-neg-benign, rule: AG034, label: negative, code: "@tool\ndef cleanup():\n    queue.delete_message(handle)\n"}
+
+  # --- AG035 money movement via agent tool ---
+  - {id: ag035-pos-refund, rule: AG035, label: positive, code: "@tool\ndef handle(o):\n    stripe.Refund.create(charge=o.charge)\n"}
+  - {id: ag035-pos-payout, rule: AG035, label: positive, code: "from stripe import Payout\n@tool\ndef pay(v):\n    Payout.create(amount=v.owed)\n"}
+  - {id: ag035-neg-nontool, rule: AG035, label: negative, code: "def handle(o):\n    stripe.Refund.create(charge=o.charge)\n"}
+  - {id: ag035-neg-customer, rule: AG035, label: negative, code: "@tool\ndef signup(e):\n    stripe.Customer.create(email=e)\n"}
+
   # --- AG021 broadened deserialization sinks ---
   - {id: ag021-pos-joblib, rule: AG021, label: positive, code: "import joblib\njoblib.load(f)\n"}
   - {id: ag021-pos-pandas, rule: AG021, label: positive, code: "import pandas\npandas.read_pickle(f)\n"}

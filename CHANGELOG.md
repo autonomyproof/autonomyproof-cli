@@ -4,6 +4,22 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0]
+
+### Added
+- **AG034 — Cloud/infrastructure destruction exposed to the agent.** Flags an agent tool that
+  can tear down cloud infrastructure with no approval: AWS `terminate_instances`,
+  `delete_bucket`, `delete_db_instance`, `delete_cluster`, `delete_stack`, `delete_volume`,
+  and Kubernetes `delete_namespaced_*` / `delete_collection_*` / `delete_namespace`. Mapped to
+  MITRE ATT&CK T1485 + T1531.
+- **AG035 — Money movement exposed to the agent without approval.** Flags `Refund.create`,
+  `Payout.create`, and `Transfer.create` (Stripe-style) inside an agent tool with no approval
+  gate — the classic prompt-injection payout attack.
+
+Both reuse AG033's call-based, tool-scoped, approval-suppressed model (the shared
+`_iter_tool_sinks` spine), so they stay zero-false-positive. Verified: corpus precision/recall
+1.000, and 0 findings across the 41-repo real benchmark.
+
 ## [0.15.0]
 
 ### Added
