@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import ast
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 
 from autonomyproof.astutils import string_literals
 from autonomyproof.models import Finding, Mappings, Severity
@@ -96,6 +96,30 @@ _WIPE_FUNCTIONS = {"shutil.rmtree", "os.removedirs"}
 # Destructive DDL embedded as a string and executed from inside a tool body.
 _DESTRUCTIVE_SQL = ("drop database", "drop table", "truncate table")
 
+# AG034 — cloud/infra resource destruction. These SDK method names each tear down a whole
+# resource (a bucket, instance, cluster, stack, volume) and have no benign single-record
+# meaning, so matching by method name inside a tool stays zero-FP.
+_CLOUD_DESTROY_METHODS = {
+    "delete_bucket",  # AWS S3 — the entire bucket
+    "terminate_instances",  # AWS EC2
+    "delete_db_instance",  # AWS RDS
+    "delete_db_cluster",  # AWS RDS/Aurora
+    "delete_cluster",  # EKS / ECS / Redshift
+    "delete_stack",  # CloudFormation — the whole stack
+    "delete_volume",  # EBS
+    "delete_file_system",  # EFS
+    "delete_nodegroup",  # EKS
+}
+# Kubernetes client teardown verbs are matched by prefix (delete_namespaced_deployment,
+# delete_collection_namespaced_pod, ...) plus the whole-namespace delete.
+_K8S_DESTROY_PREFIXES = ("delete_namespaced_", "delete_collection_")
+_K8S_DESTROY_METHODS = {"delete_namespace"}
+
+# AG035 — money movement. `<Resource>.create(...)` on one of these Stripe-style resource
+# classes moves funds; none has a benign meaning inside an unattended agent tool.
+_MONEY_RESOURCES = {"Refund", "Payout", "Transfer"}
+_MONEY_VERBS = {"create", "create_async"}
+
 _CTRL_MAPPINGS = Mappings(
     owaspAgentic=["Excessive agency", "Insufficient oversight"],
     nistAiRmf=["Govern", "Manage"],
@@ -113,6 +137,33 @@ def _identifiers_in(node: ast.AST) -> set[str]:
         elif isinstance(child, ast.keyword) and child.arg:
             tokens.add(child.arg.lower())
     return tokens
+
+
+def _iter_tool_sinks(
+    ctx: RuleContext,
+    match: Callable[[RuleContext, ast.AST, ast.FunctionDef | ast.AsyncFunctionDef], str | None],
+) -> Iterable[tuple[ast.FunctionDef | ast.AsyncFunctionDef, ast.AST, str]]:
+    """Yield ``(tool_func, sink_node, evidence)`` for each registered agent tool with no
+    approval marker whose body contains a sink accepted by ``match``.
+
+    This is the shared spine of the high-impact tool-scoped rules (AG033/AG034/AG035): a
+    dangerous operation only counts as *authority the agent holds* when it sits inside a
+    model-callable tool and nothing gates it behind a human. At most one finding per tool.
+    """
+    for node in ast.walk(ctx.analysis.tree):
+        if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+            continue
+        if node.name not in ctx.tool_functions:
+            continue
+        # Substring match (like AG007) so approved/is_approved/needs_approval all suppress.
+        body_text = " ".join(_identifiers_in(node))
+        if any(marker in body_text for marker in _APPROVAL_MARKERS):
+            continue
+        for child in ast.walk(node):
+            evidence = match(ctx, child, node)
+            if evidence is not None:
+                yield node, child, evidence
+                break
 
 
 class DangerousOperationRule(Rule):
@@ -182,45 +233,142 @@ class IrreversibleDataDestructionRule(Rule):
     )
 
     def check(self, ctx: RuleContext) -> Iterable[Finding]:
-        for node in ast.walk(ctx.analysis.tree):
-            if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
-                continue
-            # Only operations actually exposed to the model qualify — a destructive call in
-            # an ordinary migration script or admin helper is not agent-reachable authority.
-            if node.name not in ctx.tool_functions:
-                continue
-            if any(marker in _identifiers_in(node) for marker in _APPROVAL_MARKERS):
-                continue
-            hit = self._destructive_sink(ctx, node)
-            if hit is None:
-                continue
-            sink_node, evidence = hit
+        for func, sink, evidence in _iter_tool_sinks(ctx, self._match):
             yield self.make_finding(
                 ctx,
-                sink_node,
+                sink,
                 evidence=evidence,
-                tool_name=ctx.tool_functions.get(node.name, node.name),
-                pattern=f"{self.id}:{node.name}",
+                tool_name=ctx.tool_functions.get(func.name, func.name),
+                pattern=f"{self.id}:{func.name}",
             )
 
-    def _destructive_sink(
-        self, ctx: RuleContext, func: ast.FunctionDef | ast.AsyncFunctionDef
-    ) -> tuple[ast.AST, str] | None:
-        for child in ast.walk(func):
-            if isinstance(child, ast.Call):
-                # Attribute calls whose name is an unambiguous full-store wipe (drop_all,
-                # flushall, drop_database, ...). Deliberately excludes the overloaded bare
-                # `.drop(` — pandas `df.drop(col)` is a benign column drop, not a wipe.
-                if isinstance(child.func, ast.Attribute) and child.func.attr in _WIPE_METHODS:
-                    return child, f"Tool '{func.name}' calls {child.func.attr}() — full-store wipe"
-                if ctx.analysis.resolve_call(child) in _WIPE_FUNCTIONS:
-                    name = ctx.analysis.resolve_call(child)
-                    return child, f"Tool '{func.name}' calls {name}() — recursive delete"
-            if isinstance(child, ast.Constant) and isinstance(child.value, str):
-                lowered = child.value.lower()
-                marker = next((m for m in _DESTRUCTIVE_SQL if m in lowered), None)
-                if marker is not None:
-                    return child, f"Tool '{func.name}' embeds destructive SQL: {marker!r}"
+    @staticmethod
+    def _match(
+        ctx: RuleContext, child: ast.AST, func: ast.FunctionDef | ast.AsyncFunctionDef
+    ) -> str | None:
+        if isinstance(child, ast.Call):
+            # Attribute calls whose name is an unambiguous full-store wipe (drop_all,
+            # flushall, drop_database, ...). Deliberately excludes the overloaded bare
+            # `.drop(` — pandas `df.drop(col)` is a benign column drop, not a wipe.
+            if isinstance(child.func, ast.Attribute) and child.func.attr in _WIPE_METHODS:
+                return f"Tool '{func.name}' calls {child.func.attr}() — full-store wipe"
+            name = ctx.analysis.resolve_call(child)
+            if name in _WIPE_FUNCTIONS:
+                return f"Tool '{func.name}' calls {name}() — recursive delete"
+        if isinstance(child, ast.Constant) and isinstance(child.value, str):
+            lowered = child.value.lower()
+            marker = next((m for m in _DESTRUCTIVE_SQL if m in lowered), None)
+            if marker is not None:
+                return f"Tool '{func.name}' embeds destructive SQL: {marker!r}"
+        return None
+
+
+class CloudResourceDestructionRule(Rule):
+    """AG034 — Cloud/infrastructure destruction exposed to the agent."""
+
+    id = "AG034"
+    name = "Cloud/infrastructure destruction exposed to the agent"
+    default_severity = Severity.CRITICAL
+    description = (
+        "An agent tool can tear down cloud infrastructure (delete a bucket, terminate "
+        "instances, delete a cluster/stack/volume) with no approval step."
+    )
+    risk = (
+        "A manipulated agent could destroy production infrastructure — an irreversible, "
+        "high-blast-radius action with no human in the loop."
+    )
+    remediation = [
+        "Require human approval before any terminate/delete of a cloud resource",
+        "Grant the agent least-privilege IAM that cannot destroy infrastructure",
+        "Scope the tool to a single named, non-production resource",
+        "Enable deletion protection / termination protection on critical resources",
+    ]
+    mappings = Mappings(
+        owaspAgentic=["Excessive agency", "Tool misuse"],
+        nistAiRmf=["Govern", "Manage"],
+        iso42001Alignment=["Operational control", "Accountability"],
+        mitre=["T1485", "T1531"],  # Data Destruction, Account Access Removal
+    )
+
+    def check(self, ctx: RuleContext) -> Iterable[Finding]:
+        for func, sink, evidence in _iter_tool_sinks(ctx, self._match):
+            yield self.make_finding(
+                ctx,
+                sink,
+                evidence=evidence,
+                tool_name=ctx.tool_functions.get(func.name, func.name),
+                pattern=f"{self.id}:{func.name}",
+            )
+
+    @staticmethod
+    def _match(
+        ctx: RuleContext, child: ast.AST, func: ast.FunctionDef | ast.AsyncFunctionDef
+    ) -> str | None:
+        if not (isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute)):
+            return None
+        attr = child.func.attr
+        if (
+            attr in _CLOUD_DESTROY_METHODS
+            or attr in _K8S_DESTROY_METHODS
+            or attr.startswith(_K8S_DESTROY_PREFIXES)
+        ):
+            return f"Tool '{func.name}' calls {attr}() — cloud/infrastructure destruction"
+        return None
+
+
+class FinancialTransactionRule(Rule):
+    """AG035 — Money movement exposed to the agent without approval."""
+
+    id = "AG035"
+    name = "Money movement exposed to the agent without approval"
+    default_severity = Severity.CRITICAL
+    description = (
+        "An agent tool can move money (issue a refund, payout, or transfer) with no approval step."
+    )
+    risk = (
+        "A manipulated agent could issue refunds, payouts, or transfers — draining funds "
+        "with no human in the loop. This is the classic prompt-injection payout attack."
+    )
+    remediation = [
+        "Require human approval before any refund, payout, or transfer",
+        "Cap amounts and rate-limit financial actions",
+        "Use restricted API keys that cannot move funds",
+        "Log and alert on every money-movement call",
+    ]
+    mappings = Mappings(
+        owaspAgentic=["Excessive agency", "Tool misuse"],
+        nistAiRmf=["Govern", "Manage"],
+        iso42001Alignment=["Operational control", "Accountability"],
+    )
+
+    def check(self, ctx: RuleContext) -> Iterable[Finding]:
+        for func, sink, evidence in _iter_tool_sinks(ctx, self._match):
+            yield self.make_finding(
+                ctx,
+                sink,
+                evidence=evidence,
+                tool_name=ctx.tool_functions.get(func.name, func.name),
+                pattern=f"{self.id}:{func.name}",
+            )
+
+    @staticmethod
+    def _match(
+        ctx: RuleContext, child: ast.AST, func: ast.FunctionDef | ast.AsyncFunctionDef
+    ) -> str | None:
+        # Match `<Resource>.create(...)` where Resource is Refund/Payout/Transfer, whether
+        # written as `stripe.Refund.create(...)` or an imported `Refund.create(...)`.
+        if not (isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute)):
+            return None
+        if child.func.attr not in _MONEY_VERBS:
+            return None
+        receiver = child.func.value
+        resource: str | None = None
+        if isinstance(receiver, ast.Attribute):
+            resource = receiver.attr
+        elif isinstance(receiver, ast.Name):
+            resource = receiver.id
+        if resource in _MONEY_RESOURCES:
+            return f"Tool '{func.name}' calls {resource}.{child.func.attr}() — moves money"
         return None
 
 

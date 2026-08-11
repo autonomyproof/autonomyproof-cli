@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from autonomyproof.rules.agent_controls import (
+    CloudResourceDestructionRule,
     DangerousOperationRule,
     ExcessiveLimitRule,
+    FinancialTransactionRule,
     GuardrailSelfModificationRule,
     IrreversibleDataDestructionRule,
     McpArgumentValidationRule,
@@ -84,6 +86,8 @@ _RULE_CLASSES: list[type[Rule]] = [
     CorsWildcardCredentialsRule,  # AG031
     DisabledSafetyFilterRule,  # AG032
     IrreversibleDataDestructionRule,  # AG033
+    CloudResourceDestructionRule,  # AG034
+    FinancialTransactionRule,  # AG035
 ]
 
 

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from autonomyproof.rules.agent_controls import (
+    CloudResourceDestructionRule,
     DangerousOperationRule,
     ExcessiveLimitRule,
+    FinancialTransactionRule,
     GuardrailSelfModificationRule,
     IrreversibleDataDestructionRule,
     McpArgumentValidationRule,
@@ -98,6 +100,82 @@ def test_ag033_harmless_tool_clean() -> None:
         run_rule(IrreversibleDataDestructionRule(), "@tool\ndef summarize(t):\n    return t\n")
         == []
     )
+
+
+# --- AG034 --------------------------------------------------------------------
+def test_ag034_terminate_instances() -> None:
+    code = "@tool\ndef scale_down():\n    ec2.terminate_instances(InstanceIds=ids)\n"
+    findings = run_rule(CloudResourceDestructionRule(), code)
+    assert findings and findings[0].ruleId == "AG034"
+    assert findings[0].toolName == "scale_down"
+
+
+def test_ag034_delete_bucket() -> None:
+    assert run_rule(
+        CloudResourceDestructionRule(), "@tool\ndef purge():\n    s3.delete_bucket(Bucket=b)\n"
+    )
+
+
+def test_ag034_k8s_delete_namespaced() -> None:
+    code = "@tool\ndef teardown():\n    api.delete_namespaced_deployment(name, ns)\n"
+    assert run_rule(CloudResourceDestructionRule(), code)
+
+
+def test_ag034_non_tool_clean() -> None:
+    code = "def scale_down():\n    ec2.terminate_instances(InstanceIds=ids)\n"
+    assert run_rule(CloudResourceDestructionRule(), code) == []
+
+
+def test_ag034_approval_gated_clean() -> None:
+    code = (
+        "@tool\ndef scale_down():\n    if not approved:\n"
+        "        return\n    ec2.terminate_instances(InstanceIds=ids)\n"
+    )
+    assert run_rule(CloudResourceDestructionRule(), code) == []
+
+
+def test_ag034_benign_delete_clean() -> None:
+    # A single-message delete is not infra destruction — the method name is not in the set.
+    code = "@tool\ndef cleanup():\n    queue.delete_message(handle)\n"
+    assert run_rule(CloudResourceDestructionRule(), code) == []
+
+
+# --- AG035 --------------------------------------------------------------------
+def test_ag035_stripe_refund() -> None:
+    code = "@tool\ndef handle(order):\n    stripe.Refund.create(charge=order.charge)\n"
+    findings = run_rule(FinancialTransactionRule(), code)
+    assert findings and findings[0].ruleId == "AG035"
+    assert findings[0].toolName == "handle"
+
+
+def test_ag035_imported_payout() -> None:
+    code = "from stripe import Payout\n@tool\ndef pay(vendor):\n    Payout.create(amount=vendor.owed)\n"
+    assert run_rule(FinancialTransactionRule(), code)
+
+
+def test_ag035_transfer() -> None:
+    assert run_rule(
+        FinancialTransactionRule(), "@tool\ndef move(x):\n    stripe.Transfer.create(amount=x)\n"
+    )
+
+
+def test_ag035_non_tool_clean() -> None:
+    code = "def handle(order):\n    stripe.Refund.create(charge=order.charge)\n"
+    assert run_rule(FinancialTransactionRule(), code) == []
+
+
+def test_ag035_approval_gated_clean() -> None:
+    code = (
+        "@tool\ndef handle(order):\n    if not confirm:\n"
+        "        return\n    stripe.Refund.create(charge=order.charge)\n"
+    )
+    assert run_rule(FinancialTransactionRule(), code) == []
+
+
+def test_ag035_other_create_clean() -> None:
+    # Creating a non-money resource (e.g. a Customer) must not fire.
+    code = "@tool\ndef signup(email):\n    stripe.Customer.create(email=email)\n"
+    assert run_rule(FinancialTransactionRule(), code) == []
 
 
 # --- AG009 --------------------------------------------------------------------
