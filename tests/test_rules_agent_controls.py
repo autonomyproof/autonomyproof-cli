@@ -178,6 +178,12 @@ def test_ag035_other_create_clean() -> None:
     assert run_rule(FinancialTransactionRule(), code) == []
 
 
+def test_ag035_factory_create_clean() -> None:
+    # A generic `.create()` on a call result (not a Refund/Payout/Transfer class) is clean.
+    code = "@tool\ndef make():\n    build_client().create(amount=1)\n"
+    assert run_rule(FinancialTransactionRule(), code) == []
+
+
 # --- AG009 --------------------------------------------------------------------
 def test_ag009_high_retries() -> None:
     assert run_rule(ExcessiveLimitRule(), "Agent(max_retries=50)\n")
