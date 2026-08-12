@@ -10,6 +10,8 @@ from autonomyproof.rules.agent_controls import (
     GuardrailSelfModificationRule,
     IrreversibleDataDestructionRule,
     McpArgumentValidationRule,
+    PersistenceWriteRule,
+    RuntimePackageInstallRule,
     SubAgentCreationRule,
 )
 from autonomyproof.rules.base import Rule
@@ -88,6 +90,8 @@ _RULE_CLASSES: list[type[Rule]] = [
     IrreversibleDataDestructionRule,  # AG033
     CloudResourceDestructionRule,  # AG034
     FinancialTransactionRule,  # AG035
+    PersistenceWriteRule,  # AG036
+    RuntimePackageInstallRule,  # AG037
 ]
 
 

@@ -1,32 +1,32 @@
 {
-  "repo_count": 40,
-  "total_files": 34831,
-  "total_findings": 9217,
+  "repo_count": 39,
+  "total_files": 34198,
+  "total_findings": 8962,
   "by_rule": {
-    "AG001": 39,
-    "AG002": 159,
-    "AG003": 3354,
-    "AG004": 58,
-    "AG005": 994,
-    "AG006": 76,
+    "AG001": 38,
+    "AG002": 169,
+    "AG003": 3164,
+    "AG004": 56,
+    "AG005": 976,
+    "AG006": 74,
     "AG007": 55,
-    "AG009": 564,
+    "AG009": 573,
     "AG011": 73,
-    "AG012": 809,
-    "AG013": 175,
-    "AG014": 11,
-    "AG015": 276,
-    "AG016": 42,
-    "AG017": 219,
-    "AG018": 1511,
-    "AG019": 394,
-    "AG020": 40,
-    "AG021": 60,
+    "AG012": 816,
+    "AG013": 167,
+    "AG014": 10,
+    "AG015": 230,
+    "AG016": 39,
+    "AG017": 216,
+    "AG018": 1497,
+    "AG019": 403,
+    "AG020": 39,
+    "AG021": 61,
     "AG022": 30,
     "AG023": 112,
     "AG024": 12,
     "AG025": 135,
-    "AG026": 7,
+    "AG026": 5,
     "AG028": 4,
     "AG029": 1,
     "AG031": 5,
@@ -235,7 +235,7 @@
     {
       "repo": "haystack",
       "status": "ok",
-      "files_scanned": 554,
+      "files_scanned": 556,
       "findings": 120,
       "by_rule": {
         "AG002": 1,
@@ -253,7 +253,7 @@
     {
       "repo": "litellm",
       "status": "ok",
-      "files_scanned": 5192,
+      "files_scanned": 5193,
       "findings": 939,
       "by_rule": {
         "AG001": 2,
@@ -451,7 +451,7 @@
       "repo": "dspy",
       "status": "ok",
       "files_scanned": 279,
-      "findings": 114,
+      "findings": 112,
       "by_rule": {
         "AG002": 1,
         "AG003": 67,
@@ -462,8 +462,7 @@
         "AG018": 19,
         "AG020": 1,
         "AG021": 2,
-        "AG022": 2,
-        "AG026": 2
+        "AG022": 2
       }
     },
     {
@@ -490,7 +489,7 @@
     {
       "repo": "mem0",
       "status": "ok",
-      "files_scanned": 366,
+      "files_scanned": 367,
       "findings": 187,
       "by_rule": {
         "AG003": 84,
@@ -587,45 +586,30 @@
     },
     {
       "repo": "swarms",
-      "status": "ok",
-      "files_scanned": 965,
-      "findings": 300,
-      "by_rule": {
-        "AG001": 1,
-        "AG002": 2,
-        "AG003": 153,
-        "AG004": 2,
-        "AG005": 28,
-        "AG006": 2,
-        "AG009": 2,
-        "AG012": 5,
-        "AG013": 12,
-        "AG014": 1,
-        "AG015": 45,
-        "AG016": 3,
-        "AG017": 9,
-        "AG018": 33,
-        "AG019": 1,
-        "AG020": 1
-      }
+      "status": "clone_failed"
     },
     {
       "repo": "tinytroupe",
-      "status": "ok",
-      "files_scanned": 110,
-      "findings": 103,
-      "by_rule": {
-        "AG003": 94,
-        "AG005": 2,
-        "AG015": 1,
-        "AG017": 1,
-        "AG018": 4,
-        "AG020": 1
-      }
+      "status": "clone_failed"
     },
     {
       "repo": "langroid",
-      "status": "clone_failed"
+      "status": "ok",
+      "files_scanned": 438,
+      "findings": 150,
+      "by_rule": {
+        "AG002": 12,
+        "AG003": 57,
+        "AG005": 12,
+        "AG009": 11,
+        "AG012": 12,
+        "AG013": 4,
+        "AG017": 7,
+        "AG018": 23,
+        "AG019": 10,
+        "AG020": 1,
+        "AG021": 1
+      }
     },
     {
       "repo": "multi-agent-orchestrator",

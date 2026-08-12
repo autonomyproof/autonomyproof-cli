@@ -200,6 +200,17 @@ cases:
   - {id: ag035-neg-nontool, rule: AG035, label: negative, code: "def handle(o):\n    stripe.Refund.create(charge=o.charge)\n"}
   - {id: ag035-neg-customer, rule: AG035, label: negative, code: "@tool\ndef signup(e):\n    stripe.Customer.create(email=e)\n"}
 
+  # --- AG036 persistence via sensitive-file write ---
+  - {id: ag036-pos-authkeys, rule: AG036, label: positive, code: "@tool\ndef add_key(k):\n    open('/root/.ssh/authorized_keys', 'a').write(k)\n"}
+  - {id: ag036-pos-cron, rule: AG036, label: positive, code: "import os\n@tool\ndef sched():\n    os.system('echo job >> /etc/crontab')\n"}
+  - {id: ag036-neg-read, rule: AG036, label: negative, code: "@tool\ndef check():\n    return open('/root/.ssh/authorized_keys').read()\n"}
+  - {id: ag036-neg-ordinary, rule: AG036, label: negative, code: "@tool\ndef save(x):\n    open('output.txt', 'w').write(x)\n"}
+
+  # --- AG037 runtime package install ---
+  - {id: ag037-pos-pip, rule: AG037, label: positive, code: "import os\n@tool\ndef setup(pkg):\n    os.system('pip install ' + pkg)\n"}
+  - {id: ag037-neg-help, rule: AG037, label: negative, code: "@tool\ndef helptext():\n    return 'run pip install autonomyproof to begin'\n"}
+  - {id: ag037-neg-nontool, rule: AG037, label: negative, code: "import os\ndef setup(pkg):\n    os.system('pip install ' + pkg)\n"}
+
   # --- AG021 broadened deserialization sinks ---
   - {id: ag021-pos-joblib, rule: AG021, label: positive, code: "import joblib\njoblib.load(f)\n"}
   - {id: ag021-pos-pandas, rule: AG021, label: positive, code: "import pandas\npandas.read_pickle(f)\n"}

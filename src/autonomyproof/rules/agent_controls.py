@@ -5,7 +5,7 @@ from __future__ import annotations
 import ast
 from collections.abc import Callable, Iterable
 
-from autonomyproof.astutils import string_literals
+from autonomyproof.astutils import keyword, string_literals
 from autonomyproof.models import Finding, Mappings, Severity
 from autonomyproof.rules.base import Rule, RuleContext
 
@@ -120,6 +120,52 @@ _K8S_DESTROY_METHODS = {"delete_namespace"}
 _MONEY_RESOURCES = {"Refund", "Payout", "Transfer"}
 _MONEY_VERBS = {"create", "create_async"}
 
+# Shell/process executors, shared by AG036/AG037 to detect "the tool runs a command".
+_SHELL_EXECUTORS = {
+    "os.system",
+    "os.popen",
+    "subprocess.run",
+    "subprocess.call",
+    "subprocess.Popen",
+    "subprocess.check_call",
+    "subprocess.check_output",
+}
+
+# AG036 — files whose modification plants persistence or a backdoor. Each path is specific
+# enough that touching it from an agent tool is a genuine red flag, not routine I/O.
+_PERSISTENCE_MARKERS = (
+    "authorized_keys",
+    "id_rsa",
+    "id_ed25519",
+    ".ssh/config",
+    "crontab",
+    "/etc/cron",
+    "/etc/sudoers",
+    "sudoers.d",
+    ".bashrc",
+    ".bash_profile",
+    ".zshrc",
+    "/etc/profile",
+    "/etc/systemd",
+    "/etc/passwd",
+    "/etc/shadow",
+)
+_FILE_WRITE_ATTRS = {"write_text", "write_bytes", "writelines"}
+_FILE_WRITE_FUNCS = {"os.symlink", "os.link", "shutil.copy", "shutil.copyfile", "shutil.move"}
+
+# AG037 — package-install commands. An agent that installs an arbitrary package is one that
+# runs arbitrary code (install hooks / imported code), i.e. remote code execution.
+_INSTALL_MARKERS = (
+    "pip install",
+    "pip3 install",
+    "uv pip install",
+    "uv add",
+    "npm install",
+    "yarn add",
+    "poetry add",
+    "pipx install",
+)
+
 _CTRL_MAPPINGS = Mappings(
     owaspAgentic=["Excessive agency", "Insufficient oversight"],
     nistAiRmf=["Govern", "Manage"],
@@ -139,31 +185,64 @@ def _identifiers_in(node: ast.AST) -> set[str]:
     return tokens
 
 
-def _iter_tool_sinks(
+def _iter_unguarded_tools(
     ctx: RuleContext,
-    match: Callable[[RuleContext, ast.AST, ast.FunctionDef | ast.AsyncFunctionDef], str | None],
-) -> Iterable[tuple[ast.FunctionDef | ast.AsyncFunctionDef, ast.AST, str]]:
-    """Yield ``(tool_func, sink_node, evidence)`` for each registered agent tool with no
-    approval marker whose body contains a sink accepted by ``match``.
+) -> Iterable[ast.FunctionDef | ast.AsyncFunctionDef]:
+    """Yield each registered agent tool function that has no detectable approval gate.
 
-    This is the shared spine of the high-impact tool-scoped rules (AG033/AG034/AG035): a
-    dangerous operation only counts as *authority the agent holds* when it sits inside a
-    model-callable tool and nothing gates it behind a human. At most one finding per tool.
+    A dangerous operation only counts as *authority the agent holds* when it sits inside a
+    model-callable tool and nothing gates it behind a human. Approval detection is a
+    substring match (like AG007) so approved/is_approved/needs_approval all suppress.
     """
     for node in ast.walk(ctx.analysis.tree):
         if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
             continue
         if node.name not in ctx.tool_functions:
             continue
-        # Substring match (like AG007) so approved/is_approved/needs_approval all suppress.
         body_text = " ".join(_identifiers_in(node))
         if any(marker in body_text for marker in _APPROVAL_MARKERS):
             continue
+        yield node
+
+
+def _iter_tool_sinks(
+    ctx: RuleContext,
+    match: Callable[[RuleContext, ast.AST, ast.FunctionDef | ast.AsyncFunctionDef], str | None],
+) -> Iterable[tuple[ast.FunctionDef | ast.AsyncFunctionDef, ast.AST, str]]:
+    """Yield ``(tool_func, sink_node, evidence)`` for each unguarded agent tool whose body
+    contains a single node accepted by ``match`` (AG033/AG034/AG035). One finding per tool.
+    """
+    for node in _iter_unguarded_tools(ctx):
         for child in ast.walk(node):
             evidence = match(ctx, child, node)
             if evidence is not None:
                 yield node, child, evidence
                 break
+
+
+def _iter_marker_action_tools(
+    ctx: RuleContext,
+    markers: tuple[str, ...],
+    is_action: Callable[[RuleContext, ast.AST], bool],
+) -> Iterable[tuple[ast.FunctionDef | ast.AsyncFunctionDef, ast.AST, str]]:
+    """Yield ``(tool_func, marker_node, marker)`` for each unguarded tool whose body contains
+    BOTH a sensitive string literal (matching ``markers``) and an action node accepted by
+    ``is_action``. Used by AG036/AG037, where the risk is a marker + an operation on it.
+    """
+    for node in _iter_unguarded_tools(ctx):
+        marker: str | None = None
+        marker_node: ast.AST | None = None
+        action = False
+        for child in ast.walk(node):
+            if marker is None and isinstance(child, ast.Constant) and isinstance(child.value, str):
+                lowered = child.value.lower()
+                hit = next((m for m in markers if m in lowered), None)
+                if hit is not None:
+                    marker, marker_node = hit, child
+            if not action and is_action(ctx, child):
+                action = True
+        if marker is not None and marker_node is not None and action:
+            yield node, marker_node, marker
 
 
 class DangerousOperationRule(Rule):
@@ -370,6 +449,99 @@ class FinancialTransactionRule(Rule):
         if resource in _MONEY_RESOURCES:
             return f"Tool '{func.name}' calls {resource}.{child.func.attr}() — moves money"
         return None
+
+
+class PersistenceWriteRule(Rule):
+    """AG036 — Persistence/backdoor via sensitive-file write exposed to the agent."""
+
+    id = "AG036"
+    name = "Persistence-sensitive file write exposed to the agent"
+    default_severity = Severity.CRITICAL
+    description = (
+        "An agent tool can write to a file that grants persistence or backdoor access "
+        "(SSH authorized_keys, crontab, sudoers, shell rc, systemd unit) with no approval."
+    )
+    risk = (
+        "A manipulated agent could plant an SSH key, cron job, or sudoers entry — turning a "
+        "one-shot prompt injection into durable, privileged access."
+    )
+    remediation = [
+        "Never let an agent tool write to auth, cron, sudoers, or shell-init files",
+        "Constrain tool file writes to a dedicated, non-sensitive directory",
+        "Require human approval for any write outside the workspace",
+        "Run the agent as an unprivileged user without access to these paths",
+    ]
+    mappings = Mappings(
+        owaspAgentic=["Excessive agency", "Tool misuse"],
+        nistAiRmf=["Govern", "Manage"],
+        iso42001Alignment=["Operational control", "Accountability"],
+        mitre=["T1098", "T1547"],  # Account Manipulation, Boot/Logon Autostart
+    )
+
+    def check(self, ctx: RuleContext) -> Iterable[Finding]:
+        for func, node, marker in _iter_marker_action_tools(
+            ctx, _PERSISTENCE_MARKERS, self._is_write
+        ):
+            yield self.make_finding(
+                ctx,
+                node,
+                evidence=f"Tool '{func.name}' modifies a persistence-sensitive path ({marker})",
+                tool_name=ctx.tool_functions.get(func.name, func.name),
+                pattern=f"{self.id}:{func.name}",
+            )
+
+    @staticmethod
+    def _is_write(ctx: RuleContext, child: ast.AST) -> bool:
+        if not isinstance(child, ast.Call):
+            return False
+        resolved = ctx.analysis.resolve_call(child)
+        if resolved in _SHELL_EXECUTORS or resolved in _FILE_WRITE_FUNCS:
+            return True
+        if resolved == "open":
+            mode = child.args[1] if len(child.args) > 1 else keyword(child, "mode")
+            if isinstance(mode, ast.Constant) and isinstance(mode.value, str):
+                return any(c in mode.value for c in ("w", "a", "x", "+"))
+        return isinstance(child.func, ast.Attribute) and child.func.attr in _FILE_WRITE_ATTRS
+
+
+class RuntimePackageInstallRule(Rule):
+    """AG037 — Runtime package installation exposed to the agent."""
+
+    id = "AG037"
+    name = "Runtime package installation exposed to the agent"
+    default_severity = Severity.HIGH
+    description = (
+        "An agent tool can install a package at runtime (pip/npm/uv/poetry) with no approval."
+    )
+    risk = (
+        "Installing an arbitrary package executes arbitrary code (install hooks and imported "
+        "modules run), so a manipulated agent gains remote code execution."
+    )
+    remediation = [
+        "Do not let agents install packages at runtime",
+        "Pin and vendor dependencies ahead of time",
+        "If dynamic install is unavoidable, allowlist packages and require approval",
+    ]
+    mappings = Mappings(
+        owaspAgentic=["Excessive agency", "Tool misuse"],
+        nistAiRmf=["Govern", "Manage"],
+        iso42001Alignment=["Operational control", "Accountability"],
+        mitre=["T1059", "T1195"],  # Command/Scripting, Supply Chain Compromise
+    )
+
+    def check(self, ctx: RuleContext) -> Iterable[Finding]:
+        for func, node, marker in _iter_marker_action_tools(ctx, _INSTALL_MARKERS, self._is_shell):
+            yield self.make_finding(
+                ctx,
+                node,
+                evidence=f"Tool '{func.name}' runs a package install ({marker.strip()})",
+                tool_name=ctx.tool_functions.get(func.name, func.name),
+                pattern=f"{self.id}:{func.name}",
+            )
+
+    @staticmethod
+    def _is_shell(ctx: RuleContext, child: ast.AST) -> bool:
+        return isinstance(child, ast.Call) and ctx.analysis.resolve_call(child) in _SHELL_EXECUTORS
 
 
 class ExcessiveLimitRule(Rule):

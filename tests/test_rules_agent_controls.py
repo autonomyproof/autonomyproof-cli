@@ -10,6 +10,8 @@ from autonomyproof.rules.agent_controls import (
     GuardrailSelfModificationRule,
     IrreversibleDataDestructionRule,
     McpArgumentValidationRule,
+    PersistenceWriteRule,
+    RuntimePackageInstallRule,
     SubAgentCreationRule,
 )
 from helpers import run_rule
@@ -182,6 +184,86 @@ def test_ag035_factory_create_clean() -> None:
     # A generic `.create()` on a call result (not a Refund/Payout/Transfer class) is clean.
     code = "@tool\ndef make():\n    build_client().create(amount=1)\n"
     assert run_rule(FinancialTransactionRule(), code) == []
+
+
+# --- AG036 --------------------------------------------------------------------
+def test_ag036_authorized_keys_open_write() -> None:
+    code = "@tool\ndef add_key(k):\n    open('/root/.ssh/authorized_keys', 'a').write(k)\n"
+    findings = run_rule(PersistenceWriteRule(), code)
+    assert findings and findings[0].ruleId == "AG036"
+    assert findings[0].toolName == "add_key"
+
+
+def test_ag036_crontab_via_shell() -> None:
+    code = "import os\n@tool\ndef sched():\n    os.system('echo job >> /etc/crontab')\n"
+    assert run_rule(PersistenceWriteRule(), code)
+
+
+def test_ag036_write_text_bashrc() -> None:
+    code = "from pathlib import Path\n@tool\ndef persist(x):\n    Path('~/.bashrc').write_text(x)\n"
+    assert run_rule(PersistenceWriteRule(), code)
+
+
+def test_ag036_read_only_clean() -> None:
+    # Reading authorized_keys (default mode) with no write/shell action must not fire.
+    code = "@tool\ndef check():\n    return open('/root/.ssh/authorized_keys').read()\n"
+    assert run_rule(PersistenceWriteRule(), code) == []
+
+
+def test_ag036_non_tool_clean() -> None:
+    code = "def add_key(k):\n    open('/root/.ssh/authorized_keys', 'a').write(k)\n"
+    assert run_rule(PersistenceWriteRule(), code) == []
+
+
+def test_ag036_approval_gated_clean() -> None:
+    code = (
+        "@tool\ndef add_key(k):\n    if not approved:\n"
+        "        return\n    open('/root/.ssh/authorized_keys', 'a').write(k)\n"
+    )
+    assert run_rule(PersistenceWriteRule(), code) == []
+
+
+def test_ag036_ordinary_file_write_clean() -> None:
+    # Writing a normal file is not persistence — no sensitive marker.
+    code = "@tool\ndef save(x):\n    open('output.txt', 'w').write(x)\n"
+    assert run_rule(PersistenceWriteRule(), code) == []
+
+
+def test_ag036_symlink_action() -> None:
+    code = "import os\n@tool\ndef link():\n    os.symlink(src, '/etc/systemd/system/x.service')\n"
+    assert run_rule(PersistenceWriteRule(), code)
+
+
+# --- AG037 --------------------------------------------------------------------
+def test_ag037_pip_install_shell() -> None:
+    code = "import os\n@tool\ndef setup(pkg):\n    os.system('pip install ' + pkg)\n"
+    findings = run_rule(RuntimePackageInstallRule(), code)
+    assert findings and findings[0].ruleId == "AG037"
+    assert findings[0].toolName == "setup"
+
+
+def test_ag037_npm_subprocess() -> None:
+    code = "import subprocess\n@tool\ndef add(p):\n    subprocess.run('npm install ' + p, shell=True)\n"
+    assert run_rule(RuntimePackageInstallRule(), code)
+
+
+def test_ag037_non_tool_clean() -> None:
+    code = "import os\ndef setup(pkg):\n    os.system('pip install ' + pkg)\n"
+    assert run_rule(RuntimePackageInstallRule(), code) == []
+
+
+def test_ag037_install_string_no_shell_clean() -> None:
+    # Mentioning 'pip install' in help text with no shell executor must not fire.
+    code = "@tool\ndef helptext():\n    return 'run pip install autonomyproof to begin'\n"
+    assert run_rule(RuntimePackageInstallRule(), code) == []
+
+
+def test_ag037_approval_gated_clean() -> None:
+    code = (
+        "import os\n@tool\ndef setup(pkg):\n    if not confirm:\n"
+        "        return\n    os.system('pip install ' + pkg)\n"
+    )
+    assert run_rule(RuntimePackageInstallRule(), code) == []
 
 
 # --- AG009 --------------------------------------------------------------------
