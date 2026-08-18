@@ -4,6 +4,17 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.0]
+
+### Added
+- **AG040 — Model output executed as code or command (insecure output handling, OWASP LLM02).**
+  Flags the output of an LLM call (`invoke`/`predict`/`generate`/`complete`, or
+  `completions`/`messages`.`create`) flowing into a code or shell execution sink
+  (`eval`/`exec`/`compile`/`os.system`/`os.popen`/`subprocess.*`) — inline, via a
+  single-function variable, or through `.content` / `.choices[...].message.content`
+  accessors. This is the first rule to use the engine's source tracking to connect a
+  model-output *source* to a dangerous *sink*. MITRE ATT&CK T1059.
+
 ## [0.18.0]
 
 ### Added

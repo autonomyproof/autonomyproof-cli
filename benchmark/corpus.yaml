@@ -222,6 +222,14 @@ cases:
   - {id: ag039-neg-safe, rule: AG039, label: negative, code: "import os\n@tool\ndef fix(p):\n    os.chmod(p, 0o644)\n"}
   - {id: ag039-neg-dynamic, rule: AG039, label: negative, code: "import os\n@tool\ndef fix(p, mode):\n    os.chmod(p, mode)\n"}
 
+  # --- AG040 insecure model output executed as code/command ---
+  - {id: ag040-pos-eval, rule: AG040, label: positive, code: "def run(p):\n    return eval(llm.invoke(p))\n"}
+  - {id: ag040-pos-var, rule: AG040, label: positive, code: "def run(p):\n    code = llm.predict(p)\n    exec(code)\n"}
+  - {id: ag040-pos-ossystem, rule: AG040, label: positive, code: "import os\ndef run(p):\n    os.system(agent.generate(p))\n"}
+  - {id: ag040-neg-userinput, rule: AG040, label: negative, code: "def run(user_input):\n    exec(user_input)\n"}
+  - {id: ag040-neg-nonmodel, rule: AG040, label: negative, code: "def run(u):\n    data = requests.get(u).text\n    exec(data)\n"}
+  - {id: ag040-neg-constant, rule: AG040, label: negative, code: "exec('print(1)')\n"}
+
   # --- AG021 broadened deserialization sinks ---
   - {id: ag021-pos-joblib, rule: AG021, label: positive, code: "import joblib\njoblib.load(f)\n"}
   - {id: ag021-pos-pandas, rule: AG021, label: positive, code: "import pandas\npandas.read_pickle(f)\n"}

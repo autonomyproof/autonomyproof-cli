@@ -18,6 +18,29 @@ _SUBPROCESS_SHELL = {
 }
 _OS_SHELL = {"os.system", "os.popen"}
 
+# AG040 — sinks that execute their argument as code or a shell command.
+_CODE_EXEC_SINKS = {"eval", "exec", "compile", "os.system", "os.popen"}
+_SHELL_EXEC_SINKS = {
+    "subprocess.run",
+    "subprocess.Popen",
+    "subprocess.call",
+    "subprocess.check_call",
+    "subprocess.check_output",
+}
+# High-precision method names for an LLM/model call. Deliberately excludes overloaded verbs
+# like run/call/create-in-general; `create` only counts on a completions/messages receiver.
+_MODEL_METHODS = {
+    "invoke",
+    "ainvoke",
+    "predict",
+    "apredict",
+    "predict_messages",
+    "generate",
+    "agenerate",
+    "complete",
+    "acomplete",
+}
+
 _DESTRUCTIVE_MARKERS = [
     "rm -rf",
     "git push --force",
@@ -125,3 +148,75 @@ class DestructiveCommandRule(Rule):
                         pattern=f"{self.id}:{marker}",
                     )
                     break
+
+
+def _terminal(node: ast.expr) -> ast.expr:
+    """Peel attribute/subscript/await accessors to the underlying expression.
+
+    ``llm.invoke(x).content`` -> the ``llm.invoke(x)`` call;
+    ``resp.choices[0].message.content`` -> the ``resp`` name.
+    """
+    while isinstance(node, ast.Attribute | ast.Subscript | ast.Await):
+        node = node.value
+    return node
+
+
+def _is_model_call(node: ast.expr) -> bool:
+    """True if ``node`` is a call that returns LLM/model output."""
+    if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+        return False
+    if node.func.attr in _MODEL_METHODS:
+        return True
+    if node.func.attr in {"create", "acreate"}:
+        recv = node.func.value
+        return isinstance(recv, ast.Attribute) and recv.attr in {"completions", "messages"}
+    return False
+
+
+class InsecureModelOutputRule(Rule):
+    """AG040 — Model output executed as code or a shell command."""
+
+    id = "AG040"
+    name = "Model output executed as code or command"
+    default_severity = Severity.CRITICAL
+    description = "The output of an LLM call flows into a code or shell execution sink."
+    risk = (
+        "If an attacker steers the model (e.g. via prompt injection), model-generated text "
+        "becomes executed code or shell commands — remote code execution."
+    )
+    remediation = [
+        "Never pass model output to eval/exec/compile or a shell",
+        "Validate model output against a strict schema or allowlist before use",
+        "Prefer structured tool-calling over executing generated code",
+        "If code execution is required, run it in an isolated, no-network sandbox",
+    ]
+    mappings = Mappings(
+        owaspAgentic=["Tool misuse", "Excessive agency"],
+        nistAiRmf=["Measure", "Manage"],
+        iso42001Alignment=["Operational control", "Accountability"],
+        mitre=["T1059"],  # Command and Scripting Interpreter
+    )
+
+    def check(self, ctx: RuleContext) -> Iterable[Finding]:
+        for call in ctx.analysis.calls:
+            name = ctx.analysis.resolve_call(call)
+            if name not in _CODE_EXEC_SINKS and name not in _SHELL_EXEC_SINKS:
+                continue
+            if not call.args:
+                continue
+            if self._from_model(ctx, call.args[0], call):
+                yield self.make_finding(
+                    ctx, call, evidence=f"Model output flows into {name}() and is executed"
+                )
+
+    def _from_model(
+        self, ctx: RuleContext, node: ast.expr, origin: ast.AST, depth: int = 0
+    ) -> bool:
+        base = _terminal(node)
+        if _is_model_call(base):
+            return True
+        if isinstance(base, ast.Name) and depth < 4:
+            assigned = ctx.analysis.resolve_local_value(base.id, origin)
+            if assigned is not None:
+                return self._from_model(ctx, assigned, origin, depth + 1)
+        return False
