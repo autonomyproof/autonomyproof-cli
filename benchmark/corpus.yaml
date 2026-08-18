@@ -200,6 +200,28 @@ cases:
   - {id: ag035-neg-nontool, rule: AG035, label: negative, code: "def handle(o):\n    stripe.Refund.create(charge=o.charge)\n"}
   - {id: ag035-neg-customer, rule: AG035, label: negative, code: "@tool\ndef signup(e):\n    stripe.Customer.create(email=e)\n"}
 
+  # --- AG036 persistence via sensitive-file write ---
+  - {id: ag036-pos-authkeys, rule: AG036, label: positive, code: "@tool\ndef add_key(k):\n    open('/root/.ssh/authorized_keys', 'a').write(k)\n"}
+  - {id: ag036-pos-cron, rule: AG036, label: positive, code: "import os\n@tool\ndef sched():\n    os.system('echo job >> /etc/crontab')\n"}
+  - {id: ag036-neg-read, rule: AG036, label: negative, code: "@tool\ndef check():\n    return open('/root/.ssh/authorized_keys').read()\n"}
+  - {id: ag036-neg-ordinary, rule: AG036, label: negative, code: "@tool\ndef save(x):\n    open('output.txt', 'w').write(x)\n"}
+
+  # --- AG037 runtime package install ---
+  - {id: ag037-pos-pip, rule: AG037, label: positive, code: "import os\n@tool\ndef setup(pkg):\n    os.system('pip install ' + pkg)\n"}
+  - {id: ag037-neg-help, rule: AG037, label: negative, code: "@tool\ndef helptext():\n    return 'run pip install autonomyproof to begin'\n"}
+  - {id: ag037-neg-nontool, rule: AG037, label: negative, code: "import os\ndef setup(pkg):\n    os.system('pip install ' + pkg)\n"}
+
+  # --- AG038 IAM / privilege escalation via agent tool ---
+  - {id: ag038-pos-putpolicy, rule: AG038, label: positive, code: "@tool\ndef grant(u):\n    iam.put_user_policy(UserName=u, PolicyDocument=doc)\n"}
+  - {id: ag038-pos-accesskey, rule: AG038, label: positive, code: "@tool\ndef mint(u):\n    iam.create_access_key(UserName=u)\n"}
+  - {id: ag038-neg-read, rule: AG038, label: negative, code: "@tool\ndef who(u):\n    return iam.get_user(UserName=u)\n"}
+  - {id: ag038-neg-nontool, rule: AG038, label: negative, code: "def grant(u):\n    iam.put_user_policy(UserName=u, PolicyDocument=doc)\n"}
+
+  # --- AG039 world-writable permission via agent tool ---
+  - {id: ag039-pos-chmod777, rule: AG039, label: positive, code: "import os\n@tool\ndef loosen(p):\n    os.chmod(p, 0o777)\n"}
+  - {id: ag039-neg-safe, rule: AG039, label: negative, code: "import os\n@tool\ndef fix(p):\n    os.chmod(p, 0o644)\n"}
+  - {id: ag039-neg-dynamic, rule: AG039, label: negative, code: "import os\n@tool\ndef fix(p, mode):\n    os.chmod(p, mode)\n"}
+
   # --- AG021 broadened deserialization sinks ---
   - {id: ag021-pos-joblib, rule: AG021, label: positive, code: "import joblib\njoblib.load(f)\n"}
   - {id: ag021-pos-pandas, rule: AG021, label: positive, code: "import pandas\npandas.read_pickle(f)\n"}

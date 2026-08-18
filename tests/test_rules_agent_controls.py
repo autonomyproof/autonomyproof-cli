@@ -8,9 +8,13 @@ from autonomyproof.rules.agent_controls import (
     ExcessiveLimitRule,
     FinancialTransactionRule,
     GuardrailSelfModificationRule,
+    IamPrivilegeEscalationRule,
     IrreversibleDataDestructionRule,
     McpArgumentValidationRule,
+    PersistenceWriteRule,
+    RuntimePackageInstallRule,
     SubAgentCreationRule,
+    WorldWritablePermissionRule,
 )
 from helpers import run_rule
 
@@ -182,6 +186,164 @@ def test_ag035_factory_create_clean() -> None:
     # A generic `.create()` on a call result (not a Refund/Payout/Transfer class) is clean.
     code = "@tool\ndef make():\n    build_client().create(amount=1)\n"
     assert run_rule(FinancialTransactionRule(), code) == []
+
+
+# --- AG036 --------------------------------------------------------------------
+def test_ag036_authorized_keys_open_write() -> None:
+    code = "@tool\ndef add_key(k):\n    open('/root/.ssh/authorized_keys', 'a').write(k)\n"
+    findings = run_rule(PersistenceWriteRule(), code)
+    assert findings and findings[0].ruleId == "AG036"
+    assert findings[0].toolName == "add_key"
+
+
+def test_ag036_crontab_via_shell() -> None:
+    code = "import os\n@tool\ndef sched():\n    os.system('echo job >> /etc/crontab')\n"
+    assert run_rule(PersistenceWriteRule(), code)
+
+
+def test_ag036_write_text_bashrc() -> None:
+    code = "from pathlib import Path\n@tool\ndef persist(x):\n    Path('~/.bashrc').write_text(x)\n"
+    assert run_rule(PersistenceWriteRule(), code)
+
+
+def test_ag036_read_only_clean() -> None:
+    # Reading authorized_keys (default mode) with no write/shell action must not fire.
+    code = "@tool\ndef check():\n    return open('/root/.ssh/authorized_keys').read()\n"
+    assert run_rule(PersistenceWriteRule(), code) == []
+
+
+def test_ag036_non_tool_clean() -> None:
+    code = "def add_key(k):\n    open('/root/.ssh/authorized_keys', 'a').write(k)\n"
+    assert run_rule(PersistenceWriteRule(), code) == []
+
+
+def test_ag036_approval_gated_clean() -> None:
+    code = (
+        "@tool\ndef add_key(k):\n    if not approved:\n"
+        "        return\n    open('/root/.ssh/authorized_keys', 'a').write(k)\n"
+    )
+    assert run_rule(PersistenceWriteRule(), code) == []
+
+
+def test_ag036_ordinary_file_write_clean() -> None:
+    # Writing a normal file is not persistence — no sensitive marker.
+    code = "@tool\ndef save(x):\n    open('output.txt', 'w').write(x)\n"
+    assert run_rule(PersistenceWriteRule(), code) == []
+
+
+def test_ag036_symlink_action() -> None:
+    code = "import os\n@tool\ndef link():\n    os.symlink(src, '/etc/systemd/system/x.service')\n"
+    assert run_rule(PersistenceWriteRule(), code)
+
+
+# --- AG037 --------------------------------------------------------------------
+def test_ag037_pip_install_shell() -> None:
+    code = "import os\n@tool\ndef setup(pkg):\n    os.system('pip install ' + pkg)\n"
+    findings = run_rule(RuntimePackageInstallRule(), code)
+    assert findings and findings[0].ruleId == "AG037"
+    assert findings[0].toolName == "setup"
+
+
+def test_ag037_npm_subprocess() -> None:
+    code = "import subprocess\n@tool\ndef add(p):\n    subprocess.run('npm install ' + p, shell=True)\n"
+    assert run_rule(RuntimePackageInstallRule(), code)
+
+
+def test_ag037_non_tool_clean() -> None:
+    code = "import os\ndef setup(pkg):\n    os.system('pip install ' + pkg)\n"
+    assert run_rule(RuntimePackageInstallRule(), code) == []
+
+
+def test_ag037_install_string_no_shell_clean() -> None:
+    # Mentioning 'pip install' in help text with no shell executor must not fire.
+    code = "@tool\ndef helptext():\n    return 'run pip install autonomyproof to begin'\n"
+    assert run_rule(RuntimePackageInstallRule(), code) == []
+
+
+def test_ag037_approval_gated_clean() -> None:
+    code = (
+        "import os\n@tool\ndef setup(pkg):\n    if not confirm:\n"
+        "        return\n    os.system('pip install ' + pkg)\n"
+    )
+    assert run_rule(RuntimePackageInstallRule(), code) == []
+
+
+# --- AG038 --------------------------------------------------------------------
+def test_ag038_put_user_policy() -> None:
+    code = "@tool\ndef grant(u):\n    iam.put_user_policy(UserName=u, PolicyDocument=doc)\n"
+    findings = run_rule(IamPrivilegeEscalationRule(), code)
+    assert findings and findings[0].ruleId == "AG038"
+    assert findings[0].toolName == "grant"
+
+
+def test_ag038_create_access_key() -> None:
+    assert run_rule(
+        IamPrivilegeEscalationRule(), "@tool\ndef mint(u):\n    iam.create_access_key(UserName=u)\n"
+    )
+
+
+def test_ag038_non_tool_clean() -> None:
+    code = "def grant(u):\n    iam.put_user_policy(UserName=u, PolicyDocument=doc)\n"
+    assert run_rule(IamPrivilegeEscalationRule(), code) == []
+
+
+def test_ag038_approval_gated_clean() -> None:
+    code = (
+        "@tool\ndef grant(u):\n    if not approved:\n"
+        "        return\n    iam.put_user_policy(UserName=u, PolicyDocument=doc)\n"
+    )
+    assert run_rule(IamPrivilegeEscalationRule(), code) == []
+
+
+def test_ag038_read_only_iam_clean() -> None:
+    # Reading IAM (get_user) is not escalation — not in the set.
+    code = "@tool\ndef who(u):\n    return iam.get_user(UserName=u)\n"
+    assert run_rule(IamPrivilegeEscalationRule(), code) == []
+
+
+def test_ag038_plain_call_clean() -> None:
+    # A non-attribute call must not fire.
+    code = "@tool\ndef noop():\n    helper()\n"
+    assert run_rule(IamPrivilegeEscalationRule(), code) == []
+
+
+# --- AG039 --------------------------------------------------------------------
+def test_ag039_os_chmod_world_writable() -> None:
+    code = "import os\n@tool\ndef loosen(p):\n    os.chmod(p, 0o777)\n"
+    findings = run_rule(WorldWritablePermissionRule(), code)
+    assert findings and findings[0].ruleId == "AG039"
+    assert findings[0].toolName == "loosen"
+
+
+def test_ag039_path_chmod_world_writable() -> None:
+    code = "from pathlib import Path\n@tool\ndef loosen(p):\n    Path(p).chmod(0o666)\n"
+    assert run_rule(WorldWritablePermissionRule(), code)
+
+
+def test_ag039_safe_mode_clean() -> None:
+    code = "import os\n@tool\ndef fix(p):\n    os.chmod(p, 0o644)\n"
+    assert run_rule(WorldWritablePermissionRule(), code) == []
+
+
+def test_ag039_dynamic_mode_clean() -> None:
+    # A non-constant mode can't be proven world-writable, so it doesn't fire.
+    code = "import os\n@tool\ndef fix(p, mode):\n    os.chmod(p, mode)\n"
+    assert run_rule(WorldWritablePermissionRule(), code) == []
+
+
+def test_ag039_non_chmod_clean() -> None:
+    code = "@tool\ndef noop():\n    print('hi')\n"
+    assert run_rule(WorldWritablePermissionRule(), code) == []
+
+
+def test_ag039_non_tool_clean() -> None:
+    code = "import os\ndef loosen(p):\n    os.chmod(p, 0o777)\n"
+    assert run_rule(WorldWritablePermissionRule(), code) == []
+
+
+def test_ag039_approval_gated_clean() -> None:
+    code = "import os\n@tool\ndef loosen(p):\n    if not approved:\n        return\n    os.chmod(p, 0o777)\n"
+    assert run_rule(WorldWritablePermissionRule(), code) == []
 
 
 # --- AG009 --------------------------------------------------------------------

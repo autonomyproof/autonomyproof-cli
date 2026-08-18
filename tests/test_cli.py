@@ -33,7 +33,7 @@ def _home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
 def test_version(runner: CliRunner) -> None:
     result = runner.invoke(cli.main, ["--version"])
     assert result.exit_code == 0
-    assert "0.16.0" in result.output
+    assert "0.18.0" in result.output
 
 
 def test_init_creates_and_is_idempotent(runner: CliRunner) -> None:
