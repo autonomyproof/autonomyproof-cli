@@ -16,16 +16,17 @@ livekit agents, browser-use, gpt-researcher, semantic-kernel, promptflow, langfl
 mem0, marvin, and more. The list is trivially extensible (edit `benchmark/repos.txt`; any repo
 that fails to clone is skipped).
 
-### Version-validated CVEs found in the wild (AG026)
-The version-gated CVE check found **real vulnerable dependency pins** in popular repos — a
-zero-FP, high-signal result:
-- **letta** pins `langchain-core==0.3.75` → CVE-2025-68664 **and** CVE-2026-44843
-- **dspy** pins `langchain-core==1.0.4` → CVE-2025-68664 **and** CVE-2026-44843
-- **anthropic-cookbook** pins `langchain-core==1.1.0` → CVE-2025-68664 **and** CVE-2026-44843
-- **camel** pins `gradio==3.18.0` → CVE-2025-48889 (arbitrary file read)
+### Version-validated CVEs found in the corpus (AG026)
+The version-gated CVE check flagged **real vulnerable dependency pins** across the corpus — a
+zero-FP, high-signal result. We report these to maintainers privately rather than naming
+projects here; in aggregate, the pins detected fall inside the published affected ranges of:
+- **CVE-2025-68664** and **CVE-2026-44843** (`langchain-core`) — multiple repos
+- **CVE-2025-48889** (`gradio`) — one repo
 
-Both versions are provably inside the published vulnerable ranges. This is what AG026 is for:
-it only fires when the pinned version is known-vulnerable, so a hit is a fact, not a guess.
+Each pinned version is provably inside the published vulnerable range. This is what AG026 is
+for: it only fires when the pinned version is known-vulnerable, so a hit is a fact, not a
+guess. (These are published advisories against the *dependencies*, not new findings against
+the projects — the value is that the scanner surfaces the downstream exposure automatically.)
 
 ## Findings per rule (whole repo, incl. tests/scripts)
 
@@ -38,13 +39,13 @@ it only fires when the pinned version is known-vulnerable, so a hit is a fact, n
 | AG007 dangerous-op-without-approval | 46 | **High** — real tools with no approval |
 | AG024 dangerous framework flag | 8 | **High** — literal `trust_remote_code=True` |
 | AG025 interpreter tool exposed | 115 | **High** — real `ShellTool` / `ComputerTool` (approval-gated suppressed) |
-| AG026 known-vulnerable dependency | 7 | **High** — real vulnerable pins: langchain-core (letta, dspy, anthropic-cookbook), gradio (camel) |
+| AG026 known-vulnerable dependency | 7 | **High** — real vulnerable `langchain-core` and `gradio` pins (multiple repos) |
 | AG027 sandbox disabled | 0 | **N/A** — no `use_docker=False` in these repos |
-| AG028 code-executing agent/chain | 4 | **High** — real `create_csv_agent` / `LLMMathChain` / `create_sql_agent` (langflow) |
-| AG029 unrestricted HTTP request tool | 1 | **High** — real `TextRequestsWrapper` (langflow) |
+| AG028 code-executing agent/chain | 4 | **High** — real `create_csv_agent` / `LLMMathChain` / `create_sql_agent` |
+| AG029 unrestricted HTTP request tool | 1 | **High** — real `TextRequestsWrapper` |
 | AG030 public share tunnel | 0 | **N/A** — no `.launch(share=True)` in these repos |
-| AG031 CORS wildcard + credentials | 5 | **High** — real FastAPI misconfigs (autogen-core, litellm, llama-deploy) |
-| AG032 disabled safety filter | 1 | **High** — real `HarmBlockThreshold.BLOCK_NONE` (pipecat) |
+| AG031 CORS wildcard + credentials | 5 | **High** — real FastAPI misconfigs |
+| AG032 disabled safety filter | 1 | **High** — real `HarmBlockThreshold.BLOCK_NONE` |
 | AG018 missing timeout | 1067 | **High** — factual (no `timeout=`) |
 | AG005 unrestricted HTTP | 752 | **Medium** — dynamic URLs are TP; config/`self.x` URLs are FP |
 | AG012 model-controlled SQL | 786 | **Medium** — f-string/var queries TP |
