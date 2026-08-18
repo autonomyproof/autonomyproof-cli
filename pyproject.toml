@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "autonomyproof"
-version = "0.22.0"
+version = "0.23.0"
 description = "Open-source local scanner that finds unsafe capabilities and missing guardrails in Python AI-agent code."
 readme = "README.md"
 requires-python = ">=3.11"
