@@ -5,7 +5,7 @@ from __future__ import annotations
 import ast
 from collections.abc import Iterable
 
-from autonomyproof.astutils import is_true_literal, keyword
+from autonomyproof.astutils import function_defs, is_true_literal, keyword, return_values
 from autonomyproof.models import Finding, Mappings, Severity
 from autonomyproof.rules.base import Rule, RuleContext
 
@@ -198,25 +198,39 @@ class InsecureModelOutputRule(Rule):
     )
 
     def check(self, ctx: RuleContext) -> Iterable[Finding]:
+        fmap = function_defs(ctx.analysis.tree)
         for call in ctx.analysis.calls:
             name = ctx.analysis.resolve_call(call)
             if name not in _CODE_EXEC_SINKS and name not in _SHELL_EXEC_SINKS:
                 continue
             if not call.args:
                 continue
-            if self._from_model(ctx, call.args[0], call):
+            if self._from_model(ctx, call.args[0], call, fmap):
                 yield self.make_finding(
                     ctx, call, evidence=f"Model output flows into {name}() and is executed"
                 )
 
     def _from_model(
-        self, ctx: RuleContext, node: ast.expr, origin: ast.AST, depth: int = 0
+        self,
+        ctx: RuleContext,
+        node: ast.expr,
+        origin: ast.AST,
+        fmap: dict[str, ast.FunctionDef | ast.AsyncFunctionDef],
+        depth: int = 0,
     ) -> bool:
         base = _terminal(node)
         if _is_model_call(base):
             return True
+        # Cross-function (single file): a call to a local helper whose body returns model
+        # output taints the result too — following the taint across the function boundary.
+        if isinstance(base, ast.Call) and isinstance(base.func, ast.Name) and depth < 4:
+            helper = fmap.get(base.func.id)
+            if helper is not None and any(
+                self._from_model(ctx, ret, ret, fmap, depth + 1) for ret in return_values(helper)
+            ):
+                return True
         if isinstance(base, ast.Name) and depth < 4:
             assigned = ctx.analysis.resolve_local_value(base.id, origin)
             if assigned is not None:
-                return self._from_model(ctx, assigned, origin, depth + 1)
+                return self._from_model(ctx, assigned, origin, fmap, depth + 1)
         return False
