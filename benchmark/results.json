@@ -1,11 +1,11 @@
 {
   "repo_count": 41,
-  "total_files": 34817,
-  "total_findings": 8942,
+  "total_files": 34820,
+  "total_findings": 8943,
   "by_rule": {
     "AG001": 37,
     "AG002": 168,
-    "AG003": 3334,
+    "AG003": 3335,
     "AG004": 58,
     "AG005": 918,
     "AG006": 61,
@@ -97,11 +97,11 @@
     {
       "repo": "openai-agents",
       "status": "ok",
-      "files_scanned": 907,
-      "findings": 396,
+      "files_scanned": 910,
+      "findings": 397,
       "by_rule": {
         "AG002": 11,
-        "AG003": 34,
+        "AG003": 35,
         "AG004": 4,
         "AG005": 9,
         "AG007": 2,

@@ -222,3 +222,30 @@ def string_literals(node: ast.AST) -> list[str]:
         for child in ast.walk(node)
         if isinstance(child, ast.Constant) and isinstance(child.value, str)
     ]
+
+
+def function_defs(tree: ast.AST) -> dict[str, ast.FunctionDef | ast.AsyncFunctionDef]:
+    """Map each same-file function name to its definition (first definition wins).
+
+    This is the minimal call graph for cross-function taint: it lets a rule resolve a
+    plain ``helper(x)`` call to the ``def helper`` in the same file and reason about what
+    that helper returns.
+    """
+    defs: dict[str, ast.FunctionDef | ast.AsyncFunctionDef] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+            defs.setdefault(node.name, node)
+    return defs
+
+
+def return_values(func: ast.FunctionDef | ast.AsyncFunctionDef) -> list[ast.expr]:
+    """Return the value expressions of ``func``'s own ``return`` statements.
+
+    Scope-respecting: it does not descend into nested functions, so a return inside a
+    closure defined within ``func`` is not attributed to ``func``.
+    """
+    return [
+        node.value
+        for node in _walk_scope(func)
+        if isinstance(node, ast.Return) and node.value is not None
+    ]

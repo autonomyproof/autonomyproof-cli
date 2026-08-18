@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.0]
+
+### Added
+- **Cross-function taint (phase 1: single-file).** New `astutils.function_defs` /
+  `return_values` build a minimal same-file call graph, and **AG040** now follows model output
+  across a local helper's `return` — e.g. `def get_resp(p): return llm.invoke(p)` then
+  `exec(get_resp(p))` is now caught, where before the taint was lost at the function boundary.
+  Bounded depth, conservative, still single-file (no cross-module reachability yet).
+
 ## [0.19.0]
 
 ### Added

@@ -154,3 +154,61 @@ def test_ag040_deep_alias_chain_not_tracked_clean() -> None:
         "    d = c\n    e = d\n    exec(e)\n"
     )
     assert run_rule(InsecureModelOutputRule(), code) == []
+
+
+# --- AG040 cross-function (single-file) taint --------------------------------
+def test_ag040_xfn_helper_returns_model() -> None:
+    code = (
+        "def get_response(p):\n    return llm.invoke(p)\ndef run(p):\n    exec(get_response(p))\n"
+    )
+    assert run_rule(InsecureModelOutputRule(), code)
+
+
+def test_ag040_xfn_helper_via_variable() -> None:
+    code = (
+        "def get_response(p):\n    r = llm.predict(p)\n    return r\n"
+        "def run(p):\n    code = get_response(p)\n    exec(code)\n"
+    )
+    assert run_rule(InsecureModelOutputRule(), code)
+
+
+def test_ag040_xfn_helper_content_accessor() -> None:
+    code = (
+        "def get_response(p):\n    return llm.invoke(p)\n"
+        "def run(p):\n    exec(get_response(p).content)\n"
+    )
+    assert run_rule(InsecureModelOutputRule(), code)
+
+
+def test_ag040_xfn_helper_with_bare_return() -> None:
+    code = (
+        "def get_response(p):\n    if not p:\n        return\n    return llm.invoke(p)\n"
+        "def run(p):\n    exec(get_response(p))\n"
+    )
+    assert run_rule(InsecureModelOutputRule(), code)
+
+
+def test_ag040_xfn_helper_returns_nonmodel_clean() -> None:
+    code = (
+        "def get_response(p):\n    return requests.get(p).text\n"
+        "def run(p):\n    exec(get_response(p))\n"
+    )
+    assert run_rule(InsecureModelOutputRule(), code) == []
+
+
+def test_ag040_xfn_unknown_function_clean() -> None:
+    # The callee is not defined in this file, so nothing can be proven about its return.
+    assert run_rule(InsecureModelOutputRule(), "def run(p):\n    exec(make_code(p))\n") == []
+
+
+def test_ag040_xfn_deep_chain_not_tracked_clean() -> None:
+    # Cross-function tracking is bounded; a 5-hop helper chain exceeds the depth limit.
+    code = (
+        "def h5(p):\n    return llm.invoke(p)\n"
+        "def h4(p):\n    return h5(p)\n"
+        "def h3(p):\n    return h4(p)\n"
+        "def h2(p):\n    return h3(p)\n"
+        "def h1(p):\n    return h2(p)\n"
+        "def run(p):\n    exec(h1(p))\n"
+    )
+    assert run_rule(InsecureModelOutputRule(), code) == []
