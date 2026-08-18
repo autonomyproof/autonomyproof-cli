@@ -71,6 +71,11 @@ known-vulnerable framework dependencies (version-validated CVEs), and more. Run
 for details. Every finding carries **OWASP Agentic, NIST AI RMF, ISO 42001, MITRE
 ATLAS/ATT&CK, and CVE** mappings where a genuine one exists.
 
+Rules and findings are grouped into three **assessment lenses** — **Harness gaps** (missing
+runtime controls), **Guardrail gaps** (absent/disabled safety controls), and **Attack vectors**
+(exploitable capability paths) — so a scan reads as a structured security assessment.
+`autonomyproof rules list` shows the catalogue grouped this way.
+
 ### How the analysis works (and its limits)
 
 AutonomyProof is AST-based static analysis. It resolves imports and follows source tracking —
@@ -146,7 +151,7 @@ re-run `autonomyproof baseline .` and commit the updated file in the same PR.
 Use the action directly:
 
 ```yaml
-- uses: autonomyproof/autonomyproof-cli@v0.21.0
+- uses: autonomyproof/autonomyproof-cli@v0.22.0
   with:
     target: .
     fail-on: high
@@ -173,7 +178,7 @@ Gate locally before a commit ever leaves your machine:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/autonomyproof/autonomyproof-cli
-    rev: v0.21.0
+    rev: v0.22.0
     hooks:
       - id: autonomyproof
 ```

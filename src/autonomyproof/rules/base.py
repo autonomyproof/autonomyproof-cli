@@ -12,6 +12,7 @@ from autonomyproof.fingerprint import compute_fingerprint
 from autonomyproof.frameworks import primary_framework
 from autonomyproof.models import Finding, Mappings, Severity
 from autonomyproof.redaction import redact
+from autonomyproof.rules.categories import category_for
 
 
 def _code_tokens(analysis: FileAnalysis) -> str:
@@ -108,6 +109,11 @@ class Rule:
     mappings: Mappings = Mappings()
     project_level: bool = False
 
+    @property
+    def category(self) -> str:
+        """The assessment lens (Harness gap / Guardrail gap / Attack vector) for this rule."""
+        return category_for(self.id)
+
     def check(self, ctx: RuleContext) -> Iterable[Finding]:
         """Yield findings for one file. Overridden by per-file rules."""
         return []
@@ -144,6 +150,7 @@ class Rule:
             fingerprint=compute_fingerprint(self.id, pctx.anchor_file, "<project>", pattern),
             framework=pctx.framework,
             toolName=None,
+            category=self.category,
         )
 
     def make_finding(
@@ -182,4 +189,5 @@ class Rule:
             ),
             framework=ctx.framework,
             toolName=resolved_tool,
+            category=self.category,
         )

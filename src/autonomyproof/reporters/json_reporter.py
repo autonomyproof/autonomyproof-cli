@@ -27,6 +27,7 @@ def build_report_dict(result: ScanResult) -> dict[str, object]:
         "score": result.score,
         "riskLevel": result.risk_level,
         "severityCounts": result.severity_counts(),
+        "assessmentCounts": result.category_counts(),
         "filesScanned": result.files_scanned,
         "rulesExecuted": result.rules_executed,
         "durationMs": result.duration_ms,

@@ -64,6 +64,7 @@ class Finding:
     fingerprint: str
     framework: str | None = None
     toolName: str | None = None
+    category: str = "Attack vector"
 
     def to_dict(self) -> dict[str, object]:
         """Serialize to a JSON-ready dict with the severity as a string."""
@@ -126,4 +127,11 @@ class ScanResult:
         counts = {s.value: 0 for s in Severity}
         for finding in self.findings:
             counts[finding.severity.value] += 1
+        return counts
+
+    def category_counts(self) -> dict[str, int]:
+        """Return a count of findings per assessment lens, in display order."""
+        counts: dict[str, int] = {}
+        for finding in self.findings:
+            counts[finding.category] = counts.get(finding.category, 0) + 1
         return counts
