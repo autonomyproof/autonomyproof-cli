@@ -25,6 +25,7 @@ from autonomyproof.rules.data import (
 from autonomyproof.rules.execution import (
     DestructiveCommandRule,
     DynamicCodeExecutionRule,
+    InsecureModelOutputRule,
     ShellExecutionRule,
 )
 from autonomyproof.rules.filesystem import CredentialPathAccessRule, FilesystemAccessRule
@@ -96,6 +97,7 @@ _RULE_CLASSES: list[type[Rule]] = [
     RuntimePackageInstallRule,  # AG037
     IamPrivilegeEscalationRule,  # AG038
     WorldWritablePermissionRule,  # AG039
+    InsecureModelOutputRule,  # AG040
 ]
 
 
