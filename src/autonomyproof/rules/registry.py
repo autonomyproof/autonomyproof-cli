@@ -8,11 +8,13 @@ from autonomyproof.rules.agent_controls import (
     ExcessiveLimitRule,
     FinancialTransactionRule,
     GuardrailSelfModificationRule,
+    IamPrivilegeEscalationRule,
     IrreversibleDataDestructionRule,
     McpArgumentValidationRule,
     PersistenceWriteRule,
     RuntimePackageInstallRule,
     SubAgentCreationRule,
+    WorldWritablePermissionRule,
 )
 from autonomyproof.rules.base import Rule
 from autonomyproof.rules.data import (
@@ -92,6 +94,8 @@ _RULE_CLASSES: list[type[Rule]] = [
     FinancialTransactionRule,  # AG035
     PersistenceWriteRule,  # AG036
     RuntimePackageInstallRule,  # AG037
+    IamPrivilegeEscalationRule,  # AG038
+    WorldWritablePermissionRule,  # AG039
 ]
 
 

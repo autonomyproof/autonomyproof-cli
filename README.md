@@ -64,6 +64,7 @@ irreversible datastore/filesystem wipes exposed to an agent tool with no approva
 destruction (`terminate_instances`, `delete_bucket`, `delete_cluster`, k8s teardown),
 money movement without approval (`Refund`/`Payout`/`Transfer.create`), persistence/backdoor
 writes (SSH `authorized_keys`, `crontab`, `sudoers`), runtime package installs (`pip install`),
+IAM/privilege escalation (`create_access_key`, `attach_role_policy`), world-writable `chmod`,
 known-vulnerable framework dependencies (version-validated CVEs), and more. Run
 `autonomyproof rules list` for the full catalogue and `autonomyproof rules explain AG001`
 for details. Every finding carries **OWASP Agentic, NIST AI RMF, ISO 42001, MITRE
@@ -141,7 +142,7 @@ re-run `autonomyproof baseline .` and commit the updated file in the same PR.
 Use the action directly:
 
 ```yaml
-- uses: autonomyproof/autonomyproof-cli@v0.17.0
+- uses: autonomyproof/autonomyproof-cli@v0.18.0
   with:
     target: .
     fail-on: high
@@ -168,7 +169,7 @@ Gate locally before a commit ever leaves your machine:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/autonomyproof/autonomyproof-cli
-    rev: v0.17.0
+    rev: v0.18.0
     hooks:
       - id: autonomyproof
 ```

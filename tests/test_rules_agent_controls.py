@@ -8,11 +8,13 @@ from autonomyproof.rules.agent_controls import (
     ExcessiveLimitRule,
     FinancialTransactionRule,
     GuardrailSelfModificationRule,
+    IamPrivilegeEscalationRule,
     IrreversibleDataDestructionRule,
     McpArgumentValidationRule,
     PersistenceWriteRule,
     RuntimePackageInstallRule,
     SubAgentCreationRule,
+    WorldWritablePermissionRule,
 )
 from helpers import run_rule
 
@@ -264,6 +266,84 @@ def test_ag037_approval_gated_clean() -> None:
         "        return\n    os.system('pip install ' + pkg)\n"
     )
     assert run_rule(RuntimePackageInstallRule(), code) == []
+
+
+# --- AG038 --------------------------------------------------------------------
+def test_ag038_put_user_policy() -> None:
+    code = "@tool\ndef grant(u):\n    iam.put_user_policy(UserName=u, PolicyDocument=doc)\n"
+    findings = run_rule(IamPrivilegeEscalationRule(), code)
+    assert findings and findings[0].ruleId == "AG038"
+    assert findings[0].toolName == "grant"
+
+
+def test_ag038_create_access_key() -> None:
+    assert run_rule(
+        IamPrivilegeEscalationRule(), "@tool\ndef mint(u):\n    iam.create_access_key(UserName=u)\n"
+    )
+
+
+def test_ag038_non_tool_clean() -> None:
+    code = "def grant(u):\n    iam.put_user_policy(UserName=u, PolicyDocument=doc)\n"
+    assert run_rule(IamPrivilegeEscalationRule(), code) == []
+
+
+def test_ag038_approval_gated_clean() -> None:
+    code = (
+        "@tool\ndef grant(u):\n    if not approved:\n"
+        "        return\n    iam.put_user_policy(UserName=u, PolicyDocument=doc)\n"
+    )
+    assert run_rule(IamPrivilegeEscalationRule(), code) == []
+
+
+def test_ag038_read_only_iam_clean() -> None:
+    # Reading IAM (get_user) is not escalation — not in the set.
+    code = "@tool\ndef who(u):\n    return iam.get_user(UserName=u)\n"
+    assert run_rule(IamPrivilegeEscalationRule(), code) == []
+
+
+def test_ag038_plain_call_clean() -> None:
+    # A non-attribute call must not fire.
+    code = "@tool\ndef noop():\n    helper()\n"
+    assert run_rule(IamPrivilegeEscalationRule(), code) == []
+
+
+# --- AG039 --------------------------------------------------------------------
+def test_ag039_os_chmod_world_writable() -> None:
+    code = "import os\n@tool\ndef loosen(p):\n    os.chmod(p, 0o777)\n"
+    findings = run_rule(WorldWritablePermissionRule(), code)
+    assert findings and findings[0].ruleId == "AG039"
+    assert findings[0].toolName == "loosen"
+
+
+def test_ag039_path_chmod_world_writable() -> None:
+    code = "from pathlib import Path\n@tool\ndef loosen(p):\n    Path(p).chmod(0o666)\n"
+    assert run_rule(WorldWritablePermissionRule(), code)
+
+
+def test_ag039_safe_mode_clean() -> None:
+    code = "import os\n@tool\ndef fix(p):\n    os.chmod(p, 0o644)\n"
+    assert run_rule(WorldWritablePermissionRule(), code) == []
+
+
+def test_ag039_dynamic_mode_clean() -> None:
+    # A non-constant mode can't be proven world-writable, so it doesn't fire.
+    code = "import os\n@tool\ndef fix(p, mode):\n    os.chmod(p, mode)\n"
+    assert run_rule(WorldWritablePermissionRule(), code) == []
+
+
+def test_ag039_non_chmod_clean() -> None:
+    code = "@tool\ndef noop():\n    print('hi')\n"
+    assert run_rule(WorldWritablePermissionRule(), code) == []
+
+
+def test_ag039_non_tool_clean() -> None:
+    code = "import os\ndef loosen(p):\n    os.chmod(p, 0o777)\n"
+    assert run_rule(WorldWritablePermissionRule(), code) == []
+
+
+def test_ag039_approval_gated_clean() -> None:
+    code = "import os\n@tool\ndef loosen(p):\n    if not approved:\n        return\n    os.chmod(p, 0o777)\n"
+    assert run_rule(WorldWritablePermissionRule(), code) == []
 
 
 # --- AG009 --------------------------------------------------------------------

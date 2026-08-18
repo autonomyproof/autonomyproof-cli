@@ -166,6 +166,28 @@ _INSTALL_MARKERS = (
     "pipx install",
 )
 
+# AG038 — IAM / privilege-escalation operations. Each grants or widens access; an agent that
+# can call these could hand itself (or an attacker) durable, elevated permissions.
+_IAM_ESCALATION_METHODS = {
+    "create_access_key",  # new long-lived credentials
+    "create_login_profile",  # console password for a user
+    "put_user_policy",  # inline IAM policy
+    "put_role_policy",
+    "put_group_policy",
+    "attach_user_policy",  # attach managed policy (e.g. AdministratorAccess)
+    "attach_role_policy",
+    "attach_group_policy",
+    "add_user_to_group",  # add to a privileged group
+    "update_assume_role_policy",  # widen who can assume a role
+    "put_bucket_policy",  # open up an S3 bucket
+    "set_iam_policy",  # GCP setIamPolicy
+    "create_policy_version",  # swap in a new default policy version
+}
+
+# AG039 — the world-writable permission bit (others may write). chmod with this bit set from
+# an agent tool weakens a file's protection.
+_WORLD_WRITABLE_BIT = 0o002
+
 _CTRL_MAPPINGS = Mappings(
     owaspAgentic=["Excessive agency", "Insufficient oversight"],
     nistAiRmf=["Govern", "Manage"],
@@ -542,6 +564,115 @@ class RuntimePackageInstallRule(Rule):
     @staticmethod
     def _is_shell(ctx: RuleContext, child: ast.AST) -> bool:
         return isinstance(child, ast.Call) and ctx.analysis.resolve_call(child) in _SHELL_EXECUTORS
+
+
+class IamPrivilegeEscalationRule(Rule):
+    """AG038 — IAM/privilege escalation exposed to the agent."""
+
+    id = "AG038"
+    name = "IAM/privilege escalation exposed to the agent"
+    default_severity = Severity.CRITICAL
+    description = (
+        "An agent tool can grant or widen access — create credentials, attach IAM policies, "
+        "add users to groups, or open a bucket policy — with no approval."
+    )
+    risk = (
+        "A manipulated agent could escalate its own or an attacker's privileges, turning a "
+        "prompt injection into durable administrative access."
+    )
+    remediation = [
+        "Never expose IAM/policy mutation to an agent without human approval",
+        "Grant the agent least-privilege credentials that cannot modify IAM",
+        "Use permission boundaries so the agent cannot widen access",
+        "Alert on every credential-creation and policy-attach call",
+    ]
+    mappings = Mappings(
+        owaspAgentic=["Identity and privilege abuse", "Excessive agency"],
+        nistAiRmf=["Govern", "Manage"],
+        iso42001Alignment=["Operational control", "Accountability"],
+        mitre=["T1098", "T1078"],  # Account Manipulation, Valid Accounts
+    )
+
+    def check(self, ctx: RuleContext) -> Iterable[Finding]:
+        for func, sink, evidence in _iter_tool_sinks(ctx, self._match):
+            yield self.make_finding(
+                ctx,
+                sink,
+                evidence=evidence,
+                tool_name=ctx.tool_functions.get(func.name, func.name),
+                pattern=f"{self.id}:{func.name}",
+            )
+
+    @staticmethod
+    def _match(
+        ctx: RuleContext, child: ast.AST, func: ast.FunctionDef | ast.AsyncFunctionDef
+    ) -> str | None:
+        if (
+            isinstance(child, ast.Call)
+            and isinstance(child.func, ast.Attribute)
+            and child.func.attr in _IAM_ESCALATION_METHODS
+        ):
+            return f"Tool '{func.name}' calls {child.func.attr}() — grants or widens access"
+        return None
+
+
+class WorldWritablePermissionRule(Rule):
+    """AG039 — World-writable permission grant exposed to the agent."""
+
+    id = "AG039"
+    name = "World-writable permission grant exposed to the agent"
+    default_severity = Severity.HIGH
+    description = (
+        "An agent tool can make a file world-writable via chmod (the other-write bit) with "
+        "no approval."
+    )
+    risk = (
+        "A world-writable file can be modified by any local user, so a manipulated agent "
+        "could weaken protection on a script, config, or credential and enable tampering."
+    )
+    remediation = [
+        "Never let an agent set world-writable permissions",
+        "Use least-privilege modes (0o600 / 0o644) for files the agent touches",
+        "Require human approval for any permission change outside the workspace",
+    ]
+    mappings = Mappings(
+        owaspAgentic=["Excessive agency", "Tool misuse"],
+        nistAiRmf=["Govern", "Manage"],
+        iso42001Alignment=["Operational control", "Accountability"],
+        mitre=["T1222"],  # File and Directory Permissions Modification
+    )
+
+    def check(self, ctx: RuleContext) -> Iterable[Finding]:
+        for func, sink, evidence in _iter_tool_sinks(ctx, self._match):
+            yield self.make_finding(
+                ctx,
+                sink,
+                evidence=evidence,
+                tool_name=ctx.tool_functions.get(func.name, func.name),
+                pattern=f"{self.id}:{func.name}",
+            )
+
+    @staticmethod
+    def _match(
+        ctx: RuleContext, child: ast.AST, func: ast.FunctionDef | ast.AsyncFunctionDef
+    ) -> str | None:
+        if not isinstance(child, ast.Call):
+            return None
+        resolved = ctx.analysis.resolve_call(child)
+        is_chmod = resolved == "os.chmod" or (
+            isinstance(child.func, ast.Attribute) and child.func.attr == "chmod"
+        )
+        if not is_chmod:
+            return None
+        for arg in child.args:
+            if (
+                isinstance(arg, ast.Constant)
+                and isinstance(arg.value, int)
+                and not isinstance(arg.value, bool)
+                and arg.value & _WORLD_WRITABLE_BIT
+            ):
+                return f"Tool '{func.name}' makes a path world-writable (chmod {oct(arg.value)})"
+        return None
 
 
 class ExcessiveLimitRule(Rule):
