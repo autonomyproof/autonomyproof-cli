@@ -173,6 +173,15 @@ def _is_model_call(node: ast.expr) -> bool:
     return False
 
 
+def _param_index(func: ast.FunctionDef | ast.AsyncFunctionDef, name: str) -> int | None:
+    """Positional index of parameter ``name`` in ``func``, or None (keyword-only excluded)."""
+    positional = func.args.posonlyargs + func.args.args
+    for index, arg in enumerate(positional):
+        if arg.arg == name:
+            return index
+    return None
+
+
 class InsecureModelOutputRule(Rule):
     """AG040 — Model output executed as code or a shell command."""
 
@@ -233,4 +242,30 @@ class InsecureModelOutputRule(Rule):
             assigned = ctx.analysis.resolve_local_value(base.id, origin)
             if assigned is not None:
                 return self._from_model(ctx, assigned, origin, fmap, depth + 1)
+            # Phase 2: parameter propagation — an unassigned name that is a parameter of the
+            # enclosing function is tainted if any caller passes model output for it.
+            if self._param_fed_by_model(ctx, base.id, origin, fmap, depth):
+                return True
+        return False
+
+    def _param_fed_by_model(
+        self,
+        ctx: RuleContext,
+        name: str,
+        origin: ast.AST,
+        fmap: dict[str, ast.FunctionDef | ast.AsyncFunctionDef],
+        depth: int,
+    ) -> bool:
+        scope = ctx.analysis.enclosing_scope(origin)
+        if not isinstance(scope, ast.FunctionDef | ast.AsyncFunctionDef):
+            return False
+        index = _param_index(scope, name)
+        if index is None:
+            return False
+        for call in ctx.analysis.calls:
+            if not (isinstance(call.func, ast.Name) and call.func.id == scope.name):
+                continue
+            arg = call.args[index] if index < len(call.args) else keyword(call, name)
+            if arg is not None and self._from_model(ctx, arg, call, fmap, depth + 1):
+                return True
         return False

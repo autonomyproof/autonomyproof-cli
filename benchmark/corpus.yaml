@@ -230,6 +230,12 @@ cases:
   - {id: ag040-neg-nonmodel, rule: AG040, label: negative, code: "def run(u):\n    data = requests.get(u).text\n    exec(data)\n"}
   - {id: ag040-neg-constant, rule: AG040, label: negative, code: "exec('print(1)')\n"}
 
+  # --- AG040 cross-function taint (return + parameter propagation) ---
+  - {id: ag040-pos-xfn-return, rule: AG040, label: positive, code: "def get_response(p):\n    return llm.invoke(p)\ndef run(p):\n    exec(get_response(p))\n"}
+  - {id: ag040-pos-xfn-param, rule: AG040, label: positive, code: "def dangerous(code):\n    exec(code)\ndef tool(p):\n    dangerous(llm.invoke(p))\n"}
+  - {id: ag040-neg-xfn-nonmodel, rule: AG040, label: negative, code: "def get_response(p):\n    return requests.get(p).text\ndef run(p):\n    exec(get_response(p))\n"}
+  - {id: ag040-neg-xfn-nocaller, rule: AG040, label: negative, code: "def dangerous(code):\n    exec(code)\n"}
+
   # --- AG021 broadened deserialization sinks ---
   - {id: ag021-pos-joblib, rule: AG021, label: positive, code: "import joblib\njoblib.load(f)\n"}
   - {id: ag021-pos-pandas, rule: AG021, label: positive, code: "import pandas\npandas.read_pickle(f)\n"}

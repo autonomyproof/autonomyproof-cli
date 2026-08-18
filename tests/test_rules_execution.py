@@ -212,3 +212,47 @@ def test_ag040_xfn_deep_chain_not_tracked_clean() -> None:
         "def run(p):\n    exec(h1(p))\n"
     )
     assert run_rule(InsecureModelOutputRule(), code) == []
+
+
+# --- AG040 cross-function phase 2 (parameter propagation) --------------------
+def test_ag040_param_fed_model_positional() -> None:
+    code = "def dangerous(code):\n    exec(code)\ndef tool(p):\n    dangerous(llm.invoke(p))\n"
+    assert run_rule(InsecureModelOutputRule(), code)
+
+
+def test_ag040_param_fed_model_keyword() -> None:
+    code = (
+        "def dangerous(code):\n    exec(code)\ndef tool(p):\n    dangerous(code=llm.predict(p))\n"
+    )
+    assert run_rule(InsecureModelOutputRule(), code)
+
+
+def test_ag040_param_fed_model_second_position() -> None:
+    code = (
+        "def dangerous(a, code):\n    exec(code)\ndef tool(p):\n    dangerous(1, llm.invoke(p))\n"
+    )
+    assert run_rule(InsecureModelOutputRule(), code)
+
+
+def test_ag040_param_caller_constant_clean() -> None:
+    code = "def dangerous(code):\n    exec(code)\ndef tool():\n    dangerous('print(1)')\n"
+    assert run_rule(InsecureModelOutputRule(), code) == []
+
+
+def test_ag040_param_no_callers_clean() -> None:
+    assert run_rule(InsecureModelOutputRule(), "def dangerous(code):\n    exec(code)\n") == []
+
+
+def test_ag040_param_caller_passes_param_clean() -> None:
+    # tool forwards its own param; tool itself has no callers feeding model output.
+    code = "def dangerous(code):\n    exec(code)\ndef tool(p):\n    dangerous(p)\n"
+    assert run_rule(InsecureModelOutputRule(), code) == []
+
+
+def test_ag040_module_level_exec_of_free_name_clean() -> None:
+    assert run_rule(InsecureModelOutputRule(), "exec(undefined_global)\n") == []
+
+
+def test_ag040_exec_of_non_param_free_name_clean() -> None:
+    code = "def f():\n    exec(g)\n"
+    assert run_rule(InsecureModelOutputRule(), code) == []
