@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.0]
+
+### Added
+- **Cross-function taint (phase 2: parameter propagation).** AG040 now also follows taint in
+  the caller→callee direction: a sink on a bare parameter (`def run_it(code): exec(code)`) is
+  flagged when a same-file caller passes model output for it
+  (`run_it(llm.invoke(p))`) — including keyword and non-first-position args. Combined with
+  phase 1 (return propagation), AG040 now tracks model output across the function boundary in
+  both directions, bounded depth, still single-file.
+
 ## [0.20.0]
 
 ### Added
