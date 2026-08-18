@@ -32,6 +32,8 @@ from autonomyproof.config import (
 )
 from autonomyproof.models import Finding, ScanResult, Severity
 from autonomyproof.reporters import write_html, write_json, write_sarif
+from autonomyproof.rules.base import Rule
+from autonomyproof.rules.categories import CATEGORY_ORDER
 from autonomyproof.rules.registry import all_rules, get_rule
 from autonomyproof.scanner import Scanner
 from autonomyproof.scoring import SCORE_DISCLAIMER
@@ -306,9 +308,15 @@ def rules() -> None:
 
 @rules.command("list")
 def rules_list() -> None:
-    """List every rule."""
+    """List every rule, grouped by assessment lens."""
+    rules_by_category: dict[str, list[Rule]] = {}
     for rule in all_rules():
-        click.echo(f"{rule.id}  {rule.default_severity.value:8}  {rule.name}")
+        rules_by_category.setdefault(rule.category, []).append(rule)
+    for category in CATEGORY_ORDER:
+        group = rules_by_category.get(category, [])
+        click.echo(f"\n{category} ({len(group)})")
+        for rule in group:
+            click.echo(f"  {rule.id}  {rule.default_severity.value:8}  {rule.name}")
 
 
 @rules.command("explain")
@@ -320,6 +328,7 @@ def rules_explain(rule_id: str) -> None:
     except KeyError as exc:
         raise click.ClickException(f"Unknown rule: {rule_id}") from exc
     click.echo(f"{rule.id} — {rule.name}")
+    click.echo(f"Category: {rule.category}")
     click.echo(f"Severity: {rule.default_severity.value}")
     click.echo(f"Description: {rule.description}")
     click.echo(f"Risk: {rule.risk}")

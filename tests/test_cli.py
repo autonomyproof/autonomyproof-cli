@@ -33,7 +33,7 @@ def _home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
 def test_version(runner: CliRunner) -> None:
     result = runner.invoke(cli.main, ["--version"])
     assert result.exit_code == 0
-    assert "0.21.0" in result.output
+    assert "0.22.0" in result.output
 
 
 def test_init_creates_and_is_idempotent(runner: CliRunner) -> None:
@@ -49,6 +49,15 @@ def test_rules_list(runner: CliRunner) -> None:
     result = runner.invoke(cli.main, ["rules", "list"])
     assert "AG001" in result.output
     assert result.output.count("AG0") >= 20
+    # Grouped by assessment lens.
+    assert "Harness gap" in result.output
+    assert "Guardrail gap" in result.output
+    assert "Attack vector" in result.output
+
+
+def test_rules_explain_shows_category(runner: CliRunner) -> None:
+    result = runner.invoke(cli.main, ["rules", "explain", "AG001"])
+    assert "Category: Attack vector" in result.output
 
 
 def test_rules_explain(runner: CliRunner) -> None:

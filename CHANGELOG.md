@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.0]
+
+### Added
+- **Assessment-lens grouping.** Every rule and finding is now tagged with one of three
+  security-assessment lenses — **Harness gap**, **Guardrail gap**, or **Attack vector** —
+  so AutonomyProof reads as a structured assessment, not a flat rule list. `rules list` groups
+  by lens; `rules explain` shows the lens; JSON reports add `assessmentCounts` and a
+  `category` on each finding; the HTML report shows a per-lens breakdown. Central mapping in
+  `rules/categories.py`, enforced complete by tests.
+
 ## [0.21.0]
 
 ### Added

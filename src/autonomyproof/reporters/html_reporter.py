@@ -7,6 +7,7 @@ from pathlib import Path
 from jinja2 import Environment, select_autoescape
 
 from autonomyproof.models import ScanResult
+from autonomyproof.rules.categories import CATEGORY_ORDER
 from autonomyproof.scoring import SCORE_DISCLAIMER
 
 _TEMPLATE = """<!doctype html>
@@ -55,6 +56,8 @@ _TEMPLATE = """<!doctype html>
         {{ tools|length }} tool(s){% if project.branch %} · branch {{ project.branch }}{% endif %}</p>
       <p>Critical: {{ counts.critical }} · High: {{ counts.high }} ·
          Medium: {{ counts.medium }} · Low: {{ counts.low }}</p>
+      {% if assessment %}<p class="muted">By assessment lens —
+        {% for category, count in assessment %}{{ category }}: {{ count }}{% if not loop.last %} · {% endif %}{% endfor %}</p>{% endif %}
     </div>
   </section>
 
@@ -156,6 +159,11 @@ def render_html(result: ScanResult) -> str:
         capabilities=result.capabilities,
         findings=[f.to_dict() for f in result.findings],
         counts=result.severity_counts(),
+        assessment=[
+            (category, count)
+            for category in CATEGORY_ORDER
+            if (count := result.category_counts().get(category, 0))
+        ],
         errors=result.errors,
         disclaimer=SCORE_DISCLAIMER,
     )
