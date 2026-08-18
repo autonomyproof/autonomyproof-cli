@@ -4,6 +4,18 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.23.0]
+
+### Fixed
+- **CVE registry audit** (every entry re-verified against NVD / GitHub Advisories — all 8 CVE
+  IDs are genuine published advisories):
+  - **CVE-2025-3108** (llama-index-core): corrected the affected range from `>=0.11.15,<0.12.41`
+    to `>=0.12.27,<0.12.41` to match the published advisory — versions 0.11.15–0.12.26 are not
+    affected and were being flagged in error.
+  - **CVE-2025-48889** (gradio): corrected the summary — it is an unauthorized file *copy* via
+    path manipulation (DoS), not "arbitrary file read / secret theft"; MITRE mapping updated
+    to T1499.
+
 ## [0.22.0]
 
 ### Added

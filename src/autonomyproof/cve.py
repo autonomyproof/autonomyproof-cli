@@ -68,7 +68,7 @@ _CVE_DB: tuple[CveRecord, ...] = (
     CveRecord(
         cve="CVE-2025-3108",
         package="llama-index-core",
-        ranges=(">=0.11.15,<0.12.41",),
+        ranges=(">=0.12.27,<0.12.41",),
         summary="LlamaIndex JsonPickleSerializer pickle deserialization RCE on untrusted data",
         mitre=("AML.T0011",),
     ),
@@ -90,8 +90,8 @@ _CVE_DB: tuple[CveRecord, ...] = (
         cve="CVE-2025-48889",
         package="gradio",
         ranges=("<5.31.0",),
-        summary="Gradio arbitrary file read via path traversal (secret theft from the host)",
-        mitre=("T1552",),
+        summary="Gradio unauthorized file copy via path manipulation (unauthenticated; DoS)",
+        mitre=("T1499",),  # Endpoint Denial of Service
     ),
 )
 
